@@ -24,7 +24,7 @@ jobs:
 
       - name: Lint Markdown files
         run: |
-          markdownlint '**/*.md
+          markdownlint '**/*.md'
           
 
   lint-rust:
