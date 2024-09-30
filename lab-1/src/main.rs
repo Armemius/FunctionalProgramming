@@ -43,7 +43,7 @@ mod tests {
     }
 
     #[test]
-    fn prob28_pre() {
+    fn prob28() {
         let number = 1001;
         let result = prob28::solution(number);
         assert_eq!(result, 669171001);
