@@ -1,15 +1,9 @@
 pub(crate) fn solution(n: u64) -> u64 {
-    let mut total_sum = 1;
-    let mut current_value = 1;
-    let mut step = 2;
-
-    for _ in (3..=n).step_by(2) {
-        for _ in 0..4 {
-            current_value += step;
-            total_sum += current_value;
-        }
-        step += 2;
-    }
-
-    total_sum
+    (1..(n - 1) / 2 + 1)
+        .flat_map(|x| std::iter::repeat(x * 2).take(4))
+        .scan(1, |acc, curr| {
+            *acc += curr;
+            Some(*acc)
+        })
+        .fold(1, |acc, x| acc + x)
 }
