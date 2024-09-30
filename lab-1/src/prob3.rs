@@ -1,13 +1,7 @@
 pub(crate) fn solution(n: u64) -> u64 {
-    let mut num = n;
-    let mut factor = 2;
-
-    while factor * factor <= num {
-        if num % factor == 0 {
-            num /= factor;
-        } else {
-            factor += 1;
-        }
-    }
-    num
+    (2 .. (n as f64).sqrt() as u64 + 1)
+        .filter(|&x| n % x == 0)
+        .filter(|&x| (2 .. (x as f64).sqrt() as u64 + 1).all(|y| x % y != 0))
+        .last()
+        .unwrap()
 }
