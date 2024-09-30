@@ -1,0 +1,52 @@
+name: Functional Programming Tasks
+on:
+  push:
+    branches: [ "main", "dev" ]
+  pull_request:
+    branches: [ "main", "dev" ]
+
+jobs:
+  lint-markdown:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      - name: Install markdownlint-cli
+        run: |
+          npm install -g markdownlint-cli
+
+      - name: Lint Markdown files
+        run: |
+          markdownlint '**/*.md
+          
+
+  lint-rust:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Install Clippy
+        run: |
+          rustup component add clippy
+
+      - name: Run Clippy
+        run: |
+          for dir in */; do
+            if [ -f "$dir/Cargo.toml" ]; then
+              (cd "$dir" && cargo clippy --all-targets --all-features -- -D warnings)
+            fi
+          done
