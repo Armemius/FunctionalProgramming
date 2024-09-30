@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Обоснование выбора языка
 
 Мне давно была интересна тема различных парадигм программирования, чаще и больше всего изучаются процедурные и
@@ -128,9 +127,6 @@
 
 - [Официальный сайт Rust](https://rust-lang.org)
 - [Документация по Rust](https://doc.rust-lang.org)
-- ~~[Rust в Steam](https://store.steampowered.com/app/252490/Rust/)~~
 - [Официальный сайт Haskell](https://www.haskell.org/)
 - [Статьи про Haskell на Habr](https://habr.com/ru/hubs/haskell/articles/)
 - [Официальный сайт OCaml](https://ocaml.org/)
-
->>>>>>> d232df8bf2d20d3056c6a930e9fc6df5b514498d
