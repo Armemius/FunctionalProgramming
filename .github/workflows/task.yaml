@@ -1,9 +1,7 @@
 name: Functional Programming Tasks
 on:
-  push:
-    branches: [ "main", "dev" ]
-  pull_request:
-    branches: [ "main", "dev" ]
+  push: {}
+  pull_request: {}
 
 jobs:
   lint-markdown:
@@ -50,3 +48,24 @@ jobs:
               (cd "$dir" && cargo clippy --all-targets --all-features -- -D warnings)
             fi
           done
+
+  test-rust:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Run tests
+        run: |
+          for dir in */; do
+            if [ -f "$dir/Cargo.toml" ]; then
+              (cd "$dir" && cargo test --all-targets --all-features)
+            fi
+          done
+      
