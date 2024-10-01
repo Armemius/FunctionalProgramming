@@ -3,16 +3,16 @@ mod prob28;
 
 fn main() {
     let number = 600851475143;
-    let largest_prime_factor = prob3::map_solution(number);
+    let largest_prime_factor = prob3::solution(number);
     println!(
-        "Largest prime factor of {} is {}",
+        "Largest prime factor of {} is {} (solution)",
         number, largest_prime_factor
     );
 
     let spiral_size = 1001;
-    let sum_diagonals = prob28::map_solution(spiral_size);
+    let sum_diagonals = prob28::solution(spiral_size);
     println!(
-        "Sum of the diagonals in a {}x{} spiral is {}",
+        "Sum of the diagonals in a {}x{} spiral is {} (solution)",
         spiral_size, spiral_size, sum_diagonals
     );
 }

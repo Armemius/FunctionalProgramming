@@ -1,4 +1,5 @@
 // Euler Problem 3: Monolithic solutions
+#[allow(dead_code)]
 pub(crate) fn solution(n: u64) -> u64 {
     let mut n = n;
     let mut factor = 2;
@@ -12,6 +13,7 @@ pub(crate) fn solution(n: u64) -> u64 {
     factor
 }
 
+#[allow(dead_code)]
 pub(crate) fn recursive_solution(n: u64) -> u64 {
     fn recursive_solution(n: u64, factor: u64) -> u64 {
         if n == 1 {
@@ -26,6 +28,7 @@ pub(crate) fn recursive_solution(n: u64) -> u64 {
 }
 
 // Euler Problem 3: Map solution
+#[allow(dead_code)]
 pub(crate) fn map_solution(n: u64) -> u64 {
     (2 .. (n as f64).sqrt() as u64 + 1)
         .filter(|&x| n % x == 0)
@@ -40,6 +43,7 @@ fn prime_numbers() -> impl Iterator<Item = u64> {
         .filter(|&x| (2 .. (x as f64).sqrt() as u64 + 1).all(|y| x % y != 0))
 }
 
+#[allow(dead_code)]
 pub(crate) fn infinite_list_solution(n: u64) -> u64 {
     prime_numbers()
         .take_while(|&x| x <= n)

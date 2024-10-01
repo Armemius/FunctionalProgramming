@@ -1,5 +1,5 @@
 // Euler Problem 28: Monolithic solutions
-
+#[allow(dead_code)]
 pub(crate) fn solution(n: u64) -> u64 {
     let mut sum = 1;
     let mut curr = 1;
@@ -13,6 +13,7 @@ pub(crate) fn solution(n: u64) -> u64 {
 }
 
 // Euler Problem 28: Recursive solution
+#[allow(dead_code)]
 pub(crate) fn recursive_solution(n: u64) -> u64 {
     if n == 1 {
         1
@@ -22,6 +23,7 @@ pub(crate) fn recursive_solution(n: u64) -> u64 {
 }
 
 // Euler Problem 28: Map solution
+#[allow(dead_code)]
 pub(crate) fn map_solution(n: u64) -> u64 {
     (2..=n)
         .step_by(2)
@@ -40,6 +42,7 @@ fn spiral_diagonals() -> impl Iterator<Item = u64> {
         .flat_map(|x| std::iter::repeat(x).take(4))
 }
 
+#[allow(dead_code)]
 pub(crate) fn infinite_list_solution(n: u64) -> u64 {
     spiral_diagonals()
         .take(((n / 2) * 4) as usize)
