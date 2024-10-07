@@ -1,0 +1,34 @@
+name: C++ checker
+on:
+  push: {}
+  pull_request: {}
+
+jobs:
+  test-cpp:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install CMake
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake
+
+      - name: Build CMake projects
+        run: |
+          for dir in */; do
+            if [ -f "$dir/CMakeLists.txt" ]; then
+              (cd "$dir" && mkdir build && cd build && cmake .. && cmake --build .)
+            fi
+          done
+
+      - name: Run tests
+        run: |
+          for dir in */; do
+            if [ -f "$dir/CMakeLists.txt" ]; then
+              (cd "$dir/build/tests" && ctest -C 'Debug')
+            fi
+          done
+      
