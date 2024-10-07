@@ -4,6 +4,31 @@ on:
   pull_request: {}
 
 jobs:
+  clang-tidy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Install Clang-Tidy
+        run: sudo apt-get update && sudo apt-get install -y clang-tidy
+
+      - name: Configure Project
+        run: |
+          mkdir build
+          cd build
+          cmake ..
+      
+      - name: Run Clang-Tidy
+        run: |
+          cd build
+          clang-tidy -p . $(find ../prob3 -name '*.cpp') \
+          $(find ../prob3 -name '*.hpp') \
+          $(find ../prob28 -name '*.cpp') \
+          $(find ../prob28 -name '*.hpp') \
+          -- -I ../prob3/include -I ../prob28/include
+
   test-cpp:
     runs-on: ubuntu-latest
 
