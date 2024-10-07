@@ -93,7 +93,7 @@ jobs:
         run: |
           for dir in */; do
             if [ -f "$dir/CMakeLists.txt" ]; then
-              (cd "$dir/build/tests" && ctest)
+              (cd "$dir/build/tests" && ctest -C 'Debug')
             fi
           done
       

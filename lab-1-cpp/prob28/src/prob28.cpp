@@ -1,5 +1,7 @@
 #include <prob28.hpp>
 
+#include <cstddef>
+
 auto spiral_diagonals_sum(const uint64_t size) -> uint64_t {
     uint64_t sum = 1;
     uint64_t current_number = 1;
