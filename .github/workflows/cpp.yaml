@@ -16,18 +16,23 @@ jobs:
 
       - name: Configure Project
         run: |
-          mkdir build
-          cd build
-          cmake ..
+          for dir in */; do
+            if [ -f "$dir/CMakeLists.txt" ]; then
+              (cd "$dir" && mkdir build && cd build && cmake .. && cmake --build .)
+            fi
+          done
       
       - name: Run Clang-Tidy
         run: |
-          cd build
-          clang-tidy -p . $(find ../prob3 -name '*.cpp') \
-          $(find ../prob3 -name '*.hpp') \
-          $(find ../prob28 -name '*.cpp') \
-          $(find ../prob28 -name '*.hpp') \
-          -- -I ../prob3/include -I ../prob28/include
+          for dir in */; do
+            if [ -f "$dir/CMakeLists.txt" ]; then
+              (cd "$dir/build" && clang-tidy -p . $(find ../prob3 -name '*.cpp') \
+                $(find ../prob3 -name '*.hpp') \
+                $(find ../prob28 -name '*.cpp') \
+                $(find ../prob28 -name '*.hpp') \
+                -- -I ../prob3/include -I ../prob28/include)
+            fi
+          done
 
   test-cpp:
     runs-on: ubuntu-latest
