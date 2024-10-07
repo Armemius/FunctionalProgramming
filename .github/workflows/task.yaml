@@ -1,4 +1,5 @@
 name: Functional Programming Tasks
+
 on:
   push: {}
   pull_request: {}
@@ -17,15 +18,13 @@ jobs:
           node-version: '16'
 
       - name: Install markdownlint-cli
-        run: |
-          npm install -g markdownlint-cli
+        run: npm install -g markdownlint-cli
 
       - name: Lint Markdown files
-        run: |
-          markdownlint '**/*.md'
-          
+        run: markdownlint '**/*.md'
 
   lint-rust:
+    needs: [lint-markdown]
     runs-on: ubuntu-latest
 
     steps:
@@ -38,8 +37,7 @@ jobs:
           toolchain: stable
 
       - name: Install Clippy
-        run: |
-          rustup component add clippy
+        run: rustup component add clippy
 
       - name: Run Clippy
         run: |
@@ -49,7 +47,39 @@ jobs:
             fi
           done
 
+  clang-tidy:
+    needs: [lint-markdown]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Install Clang-Tidy
+        run: sudo apt-get update && sudo apt-get install -y clang-tidy
+
+      - name: Configure Project
+        run: |
+          for dir in */; do
+            if [ -f "$dir/CMakeLists.txt" ]; then
+              (cd "$dir" && mkdir build && cd build && cmake .. && cmake --build .)
+            fi
+          done
+      
+      - name: Run Clang-Tidy
+        run: |
+          for dir in */; do
+            if [ -f "$dir/CMakeLists.txt" ]; then
+              (cd "$dir/build" && clang-tidy -p . $(find ../prob3 -name '*.cpp') \
+                $(find ../prob3 -name '*.hpp') \
+                $(find ../prob28 -name '*.cpp') \
+                $(find ../prob28 -name '*.hpp') \
+                -- -I ../prob3/include -I ../prob28/include)
+            fi
+          done
+
   test-rust:
+    needs: [lint-rust, clang-tidy]
     runs-on: ubuntu-latest
 
     steps:
@@ -68,4 +98,30 @@ jobs:
               (cd "$dir" && cargo test --all-targets --all-features)
             fi
           done
-      
+
+  test-cpp:
+    needs: [lint-rust, clang-tidy]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install CMake
+        run: sudo apt-get update && sudo apt-get install -y cmake
+
+      - name: Build CMake projects
+        run: |
+          for dir in */; do
+            if [ -f "$dir/CMakeLists.txt" ]; then
+              (cd "$dir" && mkdir -p build && cd build && cmake .. && cmake --build .)
+            fi
+          done
+
+      - name: Run tests
+        run: |
+          for dir in */; do
+            if [ -f "$dir/build/tests" ]; then
+              (cd "$dir/build/tests" && ctest -C 'Debug')
+            fi
+          done
