@@ -1,0 +1,127 @@
+name: Functional Programming Tasks
+
+on:
+  push: {}
+  pull_request: {}
+
+jobs:
+  lint-markdown:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      - name: Install markdownlint-cli
+        run: npm install -g markdownlint-cli
+
+      - name: Lint Markdown files
+        run: markdownlint '**/*.md'
+
+  lint-rust:
+    needs: [lint-markdown]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Install Clippy
+        run: rustup component add clippy
+
+      - name: Run Clippy
+        run: |
+          for dir in */; do
+            if [ -f "$dir/Cargo.toml" ]; then
+              (cd "$dir" && cargo clippy --all-targets --all-features -- -D warnings)
+            fi
+          done
+
+  clang-tidy:
+    needs: [lint-markdown]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Clang-Tidy
+        run: sudo apt-get update && sudo apt-get install -y clang-tidy
+
+      - name: Configure and Build Projects
+        run: |
+          for dir in */; do
+            if [ -f "$dir/CMakeLists.txt" ]; then
+              (cd "$dir" && mkdir -p build && cd build && cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON .. && cmake --build .)
+            fi
+          done
+
+      - name: Run Clang-Tidy
+        run: |
+          for dir in */; do
+            if [ -f "$dir/CMakeLists.txt" ]; then
+              (
+                cd "$dir"
+                find . -name 'compile_commands.json' -exec cp {} . \;
+                clang-tidy $(find . -name '*.cpp' -or -name '*.hpp') -p build -- -I ./include
+              )
+            fi
+          done
+
+  test-rust:
+    needs: [lint-rust, clang-tidy]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Run tests
+        run: |
+          for dir in */; do
+            if [ -f "$dir/Cargo.toml" ]; then
+              (cd "$dir" && cargo test --all-targets --all-features)
+            fi
+          done
+
+  test-cpp:
+    needs: [lint-rust, clang-tidy]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install CMake
+        run: sudo apt-get update && sudo apt-get install -y cmake
+
+      - name: Build CMake projects
+        run: |
+          for dir in */; do
+            if [ -f "$dir/CMakeLists.txt" ]; then
+              (cd "$dir" && mkdir -p build && cd build && cmake .. && cmake --build .)
+            fi
+          done
+
+      - name: Run tests
+        run: |
+          for dir in */; do
+            if [ -f "$dir/build/tests" ]; then
+              (cd "$dir/build/tests" && ctest -C 'Debug')
+            fi
+          done
