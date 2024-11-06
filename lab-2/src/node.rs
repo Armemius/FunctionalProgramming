@@ -1,7 +1,8 @@
-use std::{
-    cell::RefCell, rc::{Rc, Weak}
-};
 use std::fmt::Display;
+use std::{
+    cell::RefCell,
+    rc::{Rc, Weak},
+};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Color {
@@ -15,6 +16,7 @@ type WeakNodeRef<K, V> = Weak<RefCell<Node<K, V>>>;
 struct Node<K, V>
 where
     K: Ord,
+    V: Clone,
 {
     key: K,
     value: V,
@@ -26,7 +28,9 @@ where
 
 impl<K, V> PartialEq for Node<K, V>
 where
-    K: Ord, {
+    K: Ord,
+    V: Clone,
+{
     fn eq(&self, other: &Self) -> bool {
         self.key == other.key
     }
@@ -35,6 +39,7 @@ where
 impl<K, V> Node<K, V>
 where
     K: Ord,
+    V: Clone
 {
     pub fn new_red(key: K, value: V) -> Self {
         Self {
@@ -62,6 +67,7 @@ where
 pub struct Tree<K, V>
 where
     K: Ord,
+    V: Clone
 {
     root: Option<Rc<RefCell<Node<K, V>>>>,
 }
@@ -69,6 +75,7 @@ where
 impl<K, V> Tree<K, V>
 where
     K: Ord,
+    V: Clone
 {
     pub fn new() -> Self {
         Self { root: None }
@@ -92,9 +99,7 @@ where
         let uncle_color = Self::get_node_color(uncle.clone());
 
         match (parent_color, uncle_color) {
-            (Color::Black, _) => {
-                dbg!("Case 0: Black parent, no need to balance");
-            },
+            (Color::Black, _) => {}
             (_, Color::Red) => {
                 let parent_rc = parent.unwrap();
                 {
@@ -111,7 +116,6 @@ where
                     let mut grandparent_ref = grandparent_rc.borrow_mut();
                     grandparent_ref.color = Color::Red;
                 }
-                dbg!("Case 1: Recoloring parent, uncle, and grandparent");
                 self.balance_insertion(grandparent_rc);
             }
             (_, Color::Black) => {
@@ -136,7 +140,6 @@ where
                     };
                     if node_is_right_child {
                         self.rotate_left(parent_rc.clone());
-                        dbg!("Case 2: Left rotate");
                         self.balance_insertion(parent_rc);
                     } else {
                         {
@@ -148,7 +151,6 @@ where
                             parent_ref.color = Color::Black;
                         }
                         self.rotate_right(grandparent_rc);
-                        dbg!("Case 3: Right rotate");
                     }
                 } else {
                     let node_is_left_child = {
@@ -161,7 +163,6 @@ where
                     };
                     if node_is_left_child {
                         self.rotate_right(parent_rc.clone());
-                        dbg!("Case 2: Right rotate");
                         self.balance_insertion(parent_rc);
                     } else {
                         {
@@ -173,12 +174,8 @@ where
                             parent_ref.color = Color::Black;
                         }
                         self.rotate_left(grandparent_rc);
-                        dbg!("Case 3: Left rotate");
                     }
                 }
-            }
-            _ => {
-                dbg!((parent_color, uncle_color));
             }
         }
     }
@@ -229,7 +226,7 @@ where
             Color::Black
         }
     }
-    
+
     fn get_grandparent(node: Rc<RefCell<Node<K, V>>>) -> Option<NodeRef<K, V>> {
         let parent_weak = {
             let node_ref = node.borrow();
@@ -272,7 +269,7 @@ where
             grandparent_ref.left.clone()
         }
     }
-    
+
     fn rotate_left(&mut self, x: Rc<RefCell<Node<K, V>>>) {
         let y_option = {
             let x_ref = x.borrow();
@@ -418,15 +415,29 @@ where
             x.borrow_mut().parent = Some(Rc::downgrade(&y));
         }
     }
-}
 
+    pub fn get(&self, key: &K) -> Option<V> {
+        let mut current = self.root.clone();
+        while let Some(node) = current {
+            let node_ref = node.borrow();
+            if node_ref.key == *key {
+                return Some(node_ref.value.clone());
+            } else if node_ref.key > *key {
+                current = node_ref.left.clone();
+            } else {
+                current = node_ref.right.clone();
+            }
+        }
+        None
+    }
+}
 
 // Output
 
 impl<K, V> Tree<K, V>
 where
     K: Ord + Display,
-    V: Display,
+    V: Display + Clone
 {
     pub fn dump_tree(&self) {
         if let Some(root) = &self.root {
@@ -462,12 +473,82 @@ where
         let len = children.len();
         for (i, (child, is_right)) in children.into_iter().enumerate() {
             let is_last = i == len - 1;
-            let new_prefix = format!(
-                "{}{}   ",
-                prefix,
-                if is_tail { "    " } else { "│   " }
-            );
+            let new_prefix = format!("{}{}   ", prefix, if is_tail { "    " } else { "│   " });
             self.print_node(child, &new_prefix, is_right);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    impl<K, V> Tree<K, V>
+    where 
+        K: Ord,
+        V: Clone {
+
+        fn test_root_black(&self) -> bool {
+            if let Some(root) = self.root.clone() {
+                let root_ref = root.borrow();
+                root_ref.color == Color::Black
+            } else {
+                true
+            }
+        }
+
+        fn test_black_nodes_helper(&self, node: Option<NodeRef<K, V>>, current_count: usize, count: &mut Option<usize>) -> bool {
+            if let Some(node) = node {
+                let current_count = if node.borrow().color == Color::Black {
+                    current_count + 1
+                } else {
+                    current_count
+                };
+                self.test_black_nodes_helper(node.borrow().left.clone(), current_count, count) 
+                && self.test_black_nodes_helper(node.borrow().right.clone(), current_count, count)
+            } else {
+                if let Some(count) = count {
+                    current_count == *count
+                } else {
+                    *count = Some(current_count);
+                    true
+                }
+            }
+        }
+
+        fn test_black_nodes_count(&self) -> bool {
+            self.test_black_nodes_helper(self.root.clone(), 0, &mut None)
+        }
+    }
+
+    #[test]
+    fn test_properties() {
+        let mut tree = Tree::<i32, i32>::new();
+
+        for it in 0..128 {
+            tree.insert(it, it * 3);
+        }
+
+        assert!(tree.test_root_black());
+        assert!(tree.test_black_nodes_count());
+    }
+
+    #[test]
+    fn test_insert() {
+        let mut tree = Tree::<i32, i32>::new();
+
+        for it in 64..128 {
+            tree.insert(it, it * 3);
+        }
+        for it in (0..64).rev() {
+            tree.insert(it, it * 2);
+        }
+
+        assert_eq!(tree.get(&8), Some(16));
+        assert_eq!(tree.get(&100), Some(300));
+        assert_eq!(tree.get(&200), None);
+
+        tree.insert(8, 228);
+        assert_eq!(tree.get(&8), Some(228));
     }
 }

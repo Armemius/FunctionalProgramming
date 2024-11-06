@@ -5,10 +5,13 @@ mod node;
 fn main() {
     let mut tree = Tree::<i32, i32>::new();
 
-    for it in (0..128).rev() {
+    for it in 0..4 {
         tree.insert(it, it);
     }
-    // tree.insert(14, "g");
+
+    let key = 8;
+
+    println!("{:?}", tree.get(&key));
 
     tree.dump_tree();
 }
