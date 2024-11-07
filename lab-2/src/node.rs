@@ -16,6 +16,7 @@ type WeakNodeRef<K, V> = Weak<RefCell<Node<K, V>>>;
 struct Node<K, V>
 where
     K: Ord,
+    V: Clone
 {
     key: K,
     value: V,
@@ -28,6 +29,7 @@ where
 impl<K, V> PartialEq for Node<K, V>
 where
     K: Ord,
+    V: Clone
 {
     fn eq(&self, other: &Self) -> bool {
         self.key == other.key
@@ -37,6 +39,7 @@ where
 impl<K, V> Node<K, V>
 where
     K: Ord,
+    V: Clone
 {
     pub fn new_red(key: K, value: V) -> Self {
         Self {
@@ -64,6 +67,7 @@ where
 pub struct Tree<K, V>
 where
     K: Ord,
+    V: Clone
 {
     root: Option<Rc<RefCell<Node<K, V>>>>,
 }
@@ -71,6 +75,7 @@ where
 impl<K, V> Tree<K, V>
 where
     K: Ord,
+    V: Clone
 {
     pub fn new() -> Self {
         Self { root: None }
@@ -427,17 +432,12 @@ where
         }
     }
     
-    pub fn get_value(&self, node_option: Option<NodeRef<K, V>>) -> Ref<V> {
-        let node = node_option.expect("Node is None");
-        Ref::map(node.borrow(), |node| &node.value)
+    fn get_value(&self, node_option: Option<NodeRef<K, V>>) -> Option<V> {
+        node_option.map(|node| node.borrow().value.clone())
     }
 
-    pub fn get(&self, key: &K) -> Option<Ref<V>> {
-        if let Some(node) = self.root.as_ref() {
-            Some(Ref::map(node.borrow(), |node| &node.value))
-        } else {
-            None
-        }
+    pub fn get(&self, key: &K) -> Option<V> {
+        self.get_value(self.get_node_by_key(key, self.root.clone()))
     }
 }
 
@@ -493,6 +493,7 @@ mod tests {
     impl<K, V> Tree<K, V>
     where
         K: Ord,
+        V: Clone
     {
         fn test_root_black(&self) -> bool {
             if let Some(root) = self.root.clone() {
@@ -559,11 +560,11 @@ mod tests {
             tree.insert(it, it * 2);
         }
 
-        // assert_eq!(tree.get(&8), Some(16));
-        // assert_eq!(tree.get(&100), Some(300));
-        // assert_eq!(tree.get(&200), None);
+        assert_eq!(tree.get(&8), Some(16));
+        assert_eq!(tree.get(&100), Some(300));
+        assert_eq!(tree.get(&200), None);
 
-        // tree.insert(8, 228);
-        // assert_eq!(tree.get(&8), Some(228));
+        tree.insert(8, 228);
+        assert_eq!(tree.get(&8), Some(228));
     }
 }
