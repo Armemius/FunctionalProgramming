@@ -1,4 +1,5 @@
 use std::fmt::Display;
+use std::ops;
 use std::{
     cell::RefCell,
     rc::{Rc, Weak},
@@ -45,9 +46,20 @@ impl<T> Memory<T> {
 
     pub fn access(&self, index: usize) -> Option<&T> {
         if self.buffer.len() <= index {
-            return None;
+            None
+        } else {
+            self.buffer[index].as_ref()
         }
-        self.buffer[index].as_ref()
+    }
+
+    pub fn take(&mut self, index: usize) -> Option<T> {
+        if self.buffer.len() <= index {
+            None
+        } else {
+            let res = self.buffer[index].take();
+            self.deallocate(index);
+            res
+        }
     }
 
     pub fn modify(&mut self, index: usize, value: T) {
@@ -81,7 +93,6 @@ type WeakNodeRef<K, V> = Weak<RefCell<Node<K, V>>>;
 struct Node<K, V>
 where
     K: Ord,
-    V: Clone,
 {
     key: K,
     value: V,
@@ -94,7 +105,6 @@ where
 impl<K, V> PartialEq for Node<K, V>
 where
     K: Ord,
-    V: Clone,
 {
     fn eq(&self, other: &Self) -> bool {
         self.key == other.key
@@ -104,7 +114,6 @@ where
 impl<K, V> Node<K, V>
 where
     K: Ord,
-    V: Clone,
 {
     pub fn new_red(key: K, value: V) -> Self {
         Self {
@@ -134,7 +143,6 @@ where
 pub struct Tree<K, V>
 where
     K: Ord,
-    V: Clone,
 {
     root: Option<Rc<RefCell<Node<K, usize>>>>,
     memory: Memory<V>,
@@ -143,7 +151,6 @@ where
 impl<K, V> Tree<K, V>
 where
     K: Ord,
-    V: Clone,
 {
     pub fn new() -> Self {
         Self {
@@ -288,7 +295,7 @@ where
         }
     }
 
-    pub fn insert(&mut self, key: K, value: V) {
+    pub fn insert(mut self, key: K, value: V) -> Self {
         if let Some(root) = self.root.clone() {
             let new_node = self.insert_helper(root, key, value);
             if let Some(node) = new_node {
@@ -300,6 +307,7 @@ where
                 self.memory.allocate(value),
             ))));
         }
+        self
     }
 
     fn get_node_color(node: Option<NodeRef<K, usize>>) -> Color {
@@ -483,11 +491,12 @@ where
         }
     }
 
-    pub fn delete(&mut self, key: &K) {
+    pub fn delete(mut self, key: &K) -> Self {
         let node_to_delete = self.get_node_by_key(key, self.root.clone());
         if let Some(node) = node_to_delete {
             self.delete_node(node);
         }
+        self
     }
 
     fn delete_node(&mut self, node: NodeRef<K, usize>) {
@@ -704,6 +713,8 @@ where
     pub fn get(&self, key: &K) -> Option<&V> {
         self.get_value(self.get_node_by_key(key, self.root.clone()))
     }
+
+    
 }
 
 // Output
@@ -755,7 +766,6 @@ mod tests {
     impl<K, V> Tree<K, V>
     where
         K: Ord,
-        V: Clone,
     {
         fn test_root_black(&self) -> bool {
             if let Some(root) = self.root.clone() {
@@ -832,7 +842,6 @@ mod tests {
             match (depths_count, leafs_count) {
                 (0, _) | (_, 0) => 0.0,
                 (_, _) => depths_count as f64 / leafs_count as f64,
-                
             }
         }
     }
@@ -847,15 +856,22 @@ mod tests {
 
         for it in 0..MAX_DEPTH {
             for jt in (1 << it)..(1 << (it + 1)) {
-                tree.insert(jt, jt);
+                tree = tree.insert(jt, jt);
             }
             depths.push(tree.get_depth());
         }
 
         let expected_depths: Vec<f64> = (1..=MAX_DEPTH).map(|x| x as f64).collect();
         let mean_expected: f64 = expected_depths.iter().sum::<f64>() / expected_depths.len() as f64;
-        let ss_tot: f64 = expected_depths.iter().map(|&x| (x - mean_expected).powi(2)).sum();
-        let ss_res: f64 = depths.iter().zip(expected_depths.iter()).map(|(&d, &e)| (d - e).powi(2)).sum();
+        let ss_tot: f64 = expected_depths
+            .iter()
+            .map(|&x| (x - mean_expected).powi(2))
+            .sum();
+        let ss_res: f64 = depths
+            .iter()
+            .zip(expected_depths.iter())
+            .map(|(&d, &e)| (d - e).powi(2))
+            .sum();
         let r2: f64 = 1.0 - (ss_res / ss_tot);
 
         assert!(r2 > 0.95);
@@ -866,7 +882,7 @@ mod tests {
         let mut tree = Tree::<i32, i32>::new();
 
         for it in 0..128 {
-            tree.insert(it, it * 3);
+            tree = tree.insert(it, it * 3);
         }
 
         assert!(tree.test_root_black());
@@ -878,17 +894,17 @@ mod tests {
         let mut tree = Tree::<i32, i32>::new();
 
         for it in 64..128 {
-            tree.insert(it, it * 3);
+            tree = tree.insert(it, it * 3);
         }
         for it in (0..64).rev() {
-            tree.insert(it, it * 2);
+            tree = tree.insert(it, it * 2);
         }
 
         assert_eq!(*tree.get(&8).unwrap(), 16);
         assert_eq!(*tree.get(&100).unwrap(), 300);
         assert_eq!(tree.get(&200), None);
 
-        tree.insert(8, 228);
+        tree = tree.insert(8, 228);
         assert_eq!(*tree.get(&8).unwrap(), 228);
     }
 
@@ -897,18 +913,18 @@ mod tests {
         let mut tree = Tree::<i32, i32>::new();
 
         for it in 0..128 {
-            tree.insert(it, it * 3);
+            tree = tree.insert(it, it * 3);
         }
 
         for it in 0..128 {
             assert!(*tree.get(&it).unwrap() == it * 3);
-            tree.delete(&it);
+            tree = tree.delete(&it);
             assert!(tree.get(&it).is_none());
         }
 
-        tree.insert(0, 0);
-        tree.delete(&0);
-        tree.delete(&0);
+        tree = tree.insert(0, 0);
+        tree = tree.delete(&0);
+        tree = tree.delete(&0);
 
         assert!(tree.root.is_none());
     }
