@@ -797,6 +797,68 @@ mod tests {
         fn test_black_nodes_count(&self) -> bool {
             self.test_black_nodes_helper(self.root.clone(), 0, &mut None)
         }
+
+        fn get_depth_helper(
+            &self,
+            node: Option<NodeRef<K, usize>>,
+            current_depth: usize,
+            depth_count: &mut usize,
+            leaf_count: &mut usize,
+        ) {
+            if let Some(node) = node {
+                self.get_depth_helper(
+                    node.borrow().left.clone(),
+                    current_depth + 1,
+                    depth_count,
+                    leaf_count,
+                );
+                self.get_depth_helper(
+                    node.borrow().right.clone(),
+                    current_depth + 1,
+                    depth_count,
+                    leaf_count,
+                );
+            } else {
+                *leaf_count += 1;
+                *depth_count += current_depth;
+            }
+        }
+
+        // Retuns avg depth of tree (e.g. sum(leaf_depth) / N)
+        fn get_depth(&self) -> f64 {
+            let mut depths_count: usize = 0;
+            let mut leafs_count: usize = 0;
+            self.get_depth_helper(self.root.clone(), 0, &mut depths_count, &mut leafs_count);
+            match (depths_count, leafs_count) {
+                (0, _) | (_, 0) => 0.0,
+                (_, _) => depths_count as f64 / leafs_count as f64,
+                
+            }
+        }
+    }
+
+    #[test]
+    fn test_depth() {
+        let mut tree = Tree::<i32, i32>::new();
+
+        let mut depths: Vec<f64> = vec![];
+
+        const MAX_DEPTH: usize = 10;
+
+        for it in 0..MAX_DEPTH {
+            for jt in (1 << it)..(1 << (it + 1)) {
+                tree.insert(jt, jt);
+            }
+            depths.push(tree.get_depth());
+        }
+
+        let expected_depths: Vec<f64> = (1..=MAX_DEPTH).map(|x| x as f64).collect();
+        let mean_expected: f64 = expected_depths.iter().sum::<f64>() / expected_depths.len() as f64;
+        let ss_tot: f64 = expected_depths.iter().map(|&x| (x - mean_expected).powi(2)).sum();
+        let ss_res: f64 = depths.iter().zip(expected_depths.iter()).map(|(&d, &e)| (d - e).powi(2)).sum();
+        let r2: f64 = 1.0 - (ss_res / ss_tot);
+
+        assert!(r2 > 0.95);
     }
 
     #[test]
@@ -828,5 +890,26 @@ mod tests {
 
         tree.insert(8, 228);
         assert_eq!(*tree.get(&8).unwrap(), 228);
+    }
+
+    #[test]
+    fn test_delete() {
+        let mut tree = Tree::<i32, i32>::new();
+
+        for it in 0..128 {
+            tree.insert(it, it * 3);
+        }
+
+        for it in 0..128 {
+            assert!(*tree.get(&it).unwrap() == it * 3);
+            tree.delete(&it);
+            assert!(tree.get(&it).is_none());
+        }
+
+        tree.insert(0, 0);
+        tree.delete(&0);
+        tree.delete(&0);
+
+        assert!(tree.root.is_none());
     }
 }
