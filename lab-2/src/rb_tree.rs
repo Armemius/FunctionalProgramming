@@ -1,5 +1,4 @@
 use std::fmt::Display;
-use std::ops;
 use std::{
     cell::RefCell,
     rc::{Rc, Weak},
@@ -876,6 +875,82 @@ where K: Ord {
         self.merge(other)
     }
 }
+
+// Iterator
+
+pub struct TreeIterator<'a, K, V>
+where
+    K: Ord + Clone,
+    V: Clone,
+{
+    stack: Vec<Rc<RefCell<Node<K, usize>>>>,
+    current: Option<Rc<RefCell<Node<K, usize>>>>,
+    tree: &'a Tree<K, V>,
+}
+
+impl<'a, K, V> TreeIterator<'a, K, V>
+where
+    K: Ord + Clone,
+    V: Clone,
+{
+    pub fn new(tree: &'a Tree<K, V>) -> Self {
+        TreeIterator {
+            stack: Vec::new(),
+            current: tree.root.clone(),
+            tree,
+        }
+    }
+}
+
+impl<'a, K, V> Iterator for TreeIterator<'a, K, V>
+where
+    K: Ord + Clone,
+    V: Clone,
+{
+    type Item = (K, V);
+
+    /// Returns the next item in the in-order traversal.
+    fn next(&mut self) -> Option<Self::Item> {
+        // Traverse to the leftmost node.
+        while let Some(current) = self.current.clone() {
+            self.stack.push(current.clone());
+            self.current = current.borrow().left.clone();
+        }
+
+        // If the stack is empty, traversal is complete.
+        if self.stack.is_empty() {
+            return None;
+        }
+
+        // Pop the top node from the stack.
+        let node_rc = self.stack.pop().unwrap();
+        let node_ref = node_rc.borrow();
+
+        // Retrieve the key and value from the current node.
+        let key = node_ref.key.clone();
+        let value = self.tree.memory.access(node_ref.value)?.clone();
+
+        // Move to the right subtree.
+        self.current = node_ref.right.clone();
+
+        Some((key, value))
+    }
+}
+
+impl<'a, K, V> IntoIterator for &'a Tree<K, V>
+where
+    K: Ord + Clone,
+    V: Clone,
+{
+    type Item = (K, V);
+    type IntoIter = TreeIterator<'a, K, V>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        TreeIterator::new(self)
+    }
+}
+
+// Tests
 
 #[cfg(test)]
 mod tests {
