@@ -1,4 +1,6 @@
+use core::fmt;
 use std::fmt::Display;
+use std::mem;
 use std::{
     cell::RefCell,
     rc::{Rc, Weak},
@@ -409,7 +411,7 @@ where
         };
         let y = match y_option {
             Some(node) => node,
-            None => return, 
+            None => return,
         };
 
         {
@@ -474,7 +476,7 @@ where
         };
         let y = match y_option {
             Some(node) => node,
-            None => return, 
+            None => return,
         };
 
         {
@@ -801,74 +803,50 @@ use std::cmp::PartialEq;
 
 impl<K, V> PartialEq for Tree<K, V>
 where
-    K: Ord + PartialEq,
-    V: PartialEq,
+    K: Ord + PartialEq + fmt::Debug + fmt::Display + Clone,
+    V: PartialEq + fmt::Debug + fmt::Display + Clone,
 {
     fn eq(&self, other: &Self) -> bool {
-        let mut self_stack = Vec::new();
-        let mut other_stack = Vec::new();
-
-        let mut self_current = self.root.clone();
-        let mut other_current = other.root.clone();
-
-        loop {
-            while let Some(node_rc) = self_current {
-                self_stack.push(node_rc.clone());
-                self_current = node_rc.borrow().left.clone();
-            }
-
-            while let Some(node_rc) = other_current {
-                other_stack.push(node_rc.clone());
-                other_current = node_rc.borrow().left.clone();
-            }
-
-            if self_stack.is_empty() && other_stack.is_empty() {
-                break;
-            }
-
-            if self_stack.len() != other_stack.len() {
-                return false;
-            }
-
-            let self_node = self_stack.pop().unwrap();
-            let other_node = other_stack.pop().unwrap();
-
-            let self_ref = self_node.borrow();
-            let other_ref = other_node.borrow();
-
-            if self_ref.key != other_ref.key {
-                return false;
-            }
-
-            let self_value = self.memory.access(self_ref.value);
-            let other_value = other.memory.access(other_ref.value);
-            match (self_value, other_value) {
-                (Some(v1), Some(v2)) => {
-                    if v1 != v2 {
-                        return false;
-                    }
+        fn eq_helper<K: Ord + PartialEq + fmt::Debug, V: PartialEq + fmt::Debug>(
+            a: Option<NodeRef<K, usize>>,
+            b: Option<NodeRef<K, usize>>,
+            mem_a: &Memory<V>,
+            mem_b: &Memory<V>,
+        ) -> bool {
+            match (a, b) {
+                (Some(left), Some(right)) => {
+                    let left_ref = left.borrow();
+                    let right_ref = right.borrow();
+                    left_ref.key == right_ref.key
+                        && mem_a.access(left_ref.value) == mem_b.access(right_ref.value)
+                        && eq_helper(left_ref.left.clone(), right_ref.left.clone(), mem_a, mem_b)
+                        && eq_helper(left_ref.right.clone(), right_ref.right.clone(), mem_a, mem_b)
                 }
-                (None, None) => {}
-                _ => return false,
+                (None, None) => true,
+                _ => false,
             }
-
-            self_current = self_ref.right.clone();
-            other_current = other_ref.right.clone();
         }
 
-        true
+        self.dump_tree();
+        other.dump_tree();
+
+        eq_helper(self.root.clone(), other.root.clone(), &self.memory, &other.memory)
     }
 }
 
 impl<K, V> Default for Tree<K, V>
-where K: Ord {
+where
+    K: Ord,
+{
     fn default() -> Self {
         Self::new()
     }
 }
 
 impl<K, V> std::ops::Add for Tree<K, V>
-where K: Ord {
+where
+    K: Ord,
+{
     type Output = Self;
 
     fn add(self, other: Self) -> Self {
@@ -1042,6 +1020,107 @@ mod tests {
     }
 
     #[test]
+    fn test_iterator() {
+        let mut tree = Tree::<i32, String>::new();
+
+        tree = tree.insert(5, "five".to_string());
+        tree = tree.insert(3, "three".to_string());
+        tree = tree.insert(7, "seven".to_string());
+        tree = tree.insert(2, "two".to_string());
+        tree = tree.insert(4, "four".to_string());
+        tree = tree.insert(6, "six".to_string());
+        tree = tree.insert(8, "eight".to_string());
+
+        for (key, value) in &tree {
+            let res = match key {
+                1 => "one",
+                2 => "two",
+                3 => "three",
+                4 => "four",
+                5 => "five",
+                6 => "six",
+                7 => "seven",
+                8 => "eight",
+                9 => "nine",
+                _ => "n/a",
+            };
+
+            assert!(res == value);
+        }
+    }
+
+    #[test]
+    fn test_filter() {
+        let mut tree_a = Tree::<i32, i32>::new();
+        tree_a = tree_a.insert(1, 1);
+        tree_a = tree_a.insert(2, 2);
+        tree_a = tree_a.insert(3, 3);
+        tree_a = tree_a.insert(4, 4);
+        tree_a = tree_a.insert(5, 5);
+
+        let mut tree_b = Tree::<i32, i32>::new();
+        tree_b = tree_b.insert(1, 1);
+        tree_b = tree_b.insert(3, 3);
+        tree_b = tree_b.insert(5, 5);
+
+        assert!(tree_a
+            .into_iter()
+            .filter(|(_, value)| value % 2 != 0)
+            .eq(tree_b.into_iter()));
+    }
+
+    #[test]
+    fn test_map() {
+        let mut tree_a = Tree::<i32, i32>::new();
+
+        tree_a = tree_a.insert(1, 1);
+        tree_a = tree_a.insert(2, 2);
+        tree_a = tree_a.insert(3, 3);
+
+        let mut tree_b = Tree::<i32, i32>::new();
+
+        tree_b = tree_b.insert(1, 1);
+        tree_b = tree_b.insert(2, 4);
+        tree_b = tree_b.insert(3, 9);
+
+        assert!(tree_a
+            .into_iter()
+            .map(|(key, value)| (key, value.pow(2)))
+            .eq(tree_b.into_iter()));
+    }
+
+    #[test]
+    fn test_fold() {
+        let mut tree_a = Tree::<i32, i32>::new();
+
+        tree_a = tree_a.insert(1, 1);
+        tree_a = tree_a.insert(2, 2);
+        tree_a = tree_a.insert(3, 3);
+
+        assert_eq!(
+            tree_a.into_iter().fold(0, |prev, (_, value)| prev + value),
+            6
+        );
+    }
+
+    #[test]
+    #[allow(unused_must_use)]
+    fn test_lazy() {
+        let mut tree_a = Tree::<i32, i32>::new();
+
+        tree_a = tree_a.insert(1, 1);
+        for it in 2..128 {
+            tree_a = tree_a.insert(it, it);
+        }
+
+        tree_a.into_iter().map(|(_, value)| {
+            if value > 1 {
+                panic!("This expression should not be evaluated");
+            }
+        });
+    }
+
+    #[test]
     fn test_depth() {
         let mut tree = Tree::<i32, i32>::new();
 
@@ -1057,13 +1136,20 @@ mod tests {
         }
 
         let expected_depths: Vec<f64> = (1..=MAX_DEPTH).map(|x| x as f64).collect();
-        
-        let ss_x: f64 = expected_depths.iter().map(|x| x.powi(2)).sum::<f64>() - (expected_depths.iter().sum::<f64>()).powi(2) / expected_depths.len() as f64;
-        let ss_y: f64 = depths.iter().map(|x| x.powi(2)).sum::<f64>() - (depths.iter().sum::<f64>()).powi(2) / expected_depths.len() as f64;
-        let ss_xy: f64 = depths.iter().zip(expected_depths.iter()).map(|(x, y)| x * y).sum::<f64>() - (depths.iter().sum::<f64>() * expected_depths.iter().sum::<f64>()) / expected_depths.len() as f64;
+
+        let ss_x: f64 = expected_depths.iter().map(|x| x.powi(2)).sum::<f64>()
+            - (expected_depths.iter().sum::<f64>()).powi(2) / expected_depths.len() as f64;
+        let ss_y: f64 = depths.iter().map(|x| x.powi(2)).sum::<f64>()
+            - (depths.iter().sum::<f64>()).powi(2) / expected_depths.len() as f64;
+        let ss_xy: f64 = depths
+            .iter()
+            .zip(expected_depths.iter())
+            .map(|(x, y)| x * y)
+            .sum::<f64>()
+            - (depths.iter().sum::<f64>() * expected_depths.iter().sum::<f64>())
+                / expected_depths.len() as f64;
 
         let r2 = ss_xy.powi(2) / (ss_x * ss_y);
-
 
         dbg!(depths);
         dbg!(expected_depths);
@@ -1073,7 +1159,7 @@ mod tests {
     }
 
     #[test]
-    fn test_properties() {
+    fn test_black_root_property() {
         let mut tree = Tree::<i32, i32>::new();
 
         for it in 0..128 {
@@ -1081,6 +1167,16 @@ mod tests {
         }
 
         assert!(tree.test_root_black());
+    }
+
+    #[test]
+    fn test_black_nodes_property() {
+        let mut tree = Tree::<i32, i32>::new();
+
+        for it in 0..128 {
+            tree = tree.insert(it, it * 3);
+        }
+
         assert!(tree.test_black_nodes_count());
     }
 
@@ -1097,7 +1193,6 @@ mod tests {
         }
         assert!(tree_a == tree_b);
         assert!(tree_a + Tree::<i32, i32>::default() == tree_b);
-
     }
 
     #[test]
@@ -1168,17 +1263,17 @@ mod tests {
 
     #[test]
     fn test_partial_eq() {
-        let mut tree_a = Tree::<i32, String>::new();
-        let mut tree_b = Tree::<i32, String>::new();
+        let mut tree_a = Tree::<i32, i32>::new();
+        let mut tree_b = Tree::<i32, i32>::new();
 
-        for i in 0..10 {
-            tree_a = tree_a.insert(i, format!("{i}"));
-            tree_b = tree_b.insert(i, format!("{i}"));
+        for it in 0..10 {
+            tree_a = tree_a.insert(it, it);
+            tree_b = tree_b.insert(it, it);
         }
 
         assert!(tree_a == tree_b);
 
-        tree_b = tree_b.insert(5, "I'm too lazy to think about a creative name for a sample different variable".to_string());
+        tree_b = tree_b.insert(5, -1);
 
         assert!(tree_a != tree_b);
     }
