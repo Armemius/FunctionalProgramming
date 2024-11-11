@@ -79,6 +79,18 @@ where
     }
 }
 
+impl<T> Clone for Memory<T>
+where
+    T: Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            buffer: self.buffer.clone(),
+            freed: self.freed.clone(),
+        }
+    }
+}
+
 // Nodes
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -157,6 +169,36 @@ where
             root: None,
             memory: Memory::new(),
         }
+    }
+
+    pub fn merge(mut self, mut other: Tree<K, V>) -> Self {
+        self = self.merge_helper(other.root.take(), &mut other.memory);
+        self
+    }
+
+    fn merge_helper(
+        mut self,
+        node: Option<NodeRef<K, usize>>,
+        other_memory: &mut Memory<V>,
+    ) -> Self {
+        if let Some(node_rc) = node {
+            match Rc::try_unwrap(node_rc) {
+                Ok(refcell_node) => {
+                    let node = refcell_node.into_inner();
+                    self = self.merge_helper(node.left, other_memory);
+                    self = self.merge_helper(node.right, other_memory);
+                    let key = node.key;
+                    let value = other_memory
+                        .take(node.value)
+                        .expect("Invalid index in other memory");
+                    self = self.insert(key, value)
+                }
+                Err(_) => {
+                    panic!("Multiple references detected in the other tree");
+                }
+            }
+        }
+        self
     }
 
     fn balance_insertion(&mut self, node: NodeRef<K, usize>) {
@@ -368,7 +410,7 @@ where
         };
         let y = match y_option {
             Some(node) => node,
-            None => return, // Cannot rotate left if x.right is None
+            None => return, 
         };
 
         {
@@ -433,7 +475,7 @@ where
         };
         let y = match y_option {
             Some(node) => node,
-            None => return, // Cannot rotate right if x.left is None
+            None => return, 
         };
 
         {
@@ -534,7 +576,6 @@ where
                 parent_borrow.right = child.clone();
             }
         } else {
-            // Node is root
             self.root = child.clone();
         }
 
@@ -713,8 +754,6 @@ where
     pub fn get(&self, key: &K) -> Option<&V> {
         self.get_value(self.get_node_by_key(key, self.root.clone()))
     }
-
-    
 }
 
 // Output
@@ -759,8 +798,89 @@ where
     }
 }
 
+use std::cmp::PartialEq;
+
+impl<K, V> PartialEq for Tree<K, V>
+where
+    K: Ord + PartialEq,
+    V: PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        let mut self_stack = Vec::new();
+        let mut other_stack = Vec::new();
+
+        let mut self_current = self.root.clone();
+        let mut other_current = other.root.clone();
+
+        loop {
+            while let Some(node_rc) = self_current {
+                self_stack.push(node_rc.clone());
+                self_current = node_rc.borrow().left.clone();
+            }
+
+            while let Some(node_rc) = other_current {
+                other_stack.push(node_rc.clone());
+                other_current = node_rc.borrow().left.clone();
+            }
+
+            if self_stack.is_empty() && other_stack.is_empty() {
+                break;
+            }
+
+            if self_stack.len() != other_stack.len() {
+                return false;
+            }
+
+            let self_node = self_stack.pop().unwrap();
+            let other_node = other_stack.pop().unwrap();
+
+            let self_ref = self_node.borrow();
+            let other_ref = other_node.borrow();
+
+            if self_ref.key != other_ref.key {
+                return false;
+            }
+
+            let self_value = self.memory.access(self_ref.value);
+            let other_value = other.memory.access(other_ref.value);
+            match (self_value, other_value) {
+                (Some(v1), Some(v2)) => {
+                    if v1 != v2 {
+                        return false;
+                    }
+                }
+                (None, None) => {}
+                _ => return false,
+            }
+
+            self_current = self_ref.right.clone();
+            other_current = other_ref.right.clone();
+        }
+
+        true
+    }
+}
+
+impl<K, V> Default for Tree<K, V>
+where K: Ord {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<K, V> std::ops::Add for Tree<K, V>
+where K: Ord {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        self.merge(other)
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use std::{cmp::max, i64::MAX};
+
     use super::*;
 
     impl<K, V> Tree<K, V>
@@ -829,12 +949,12 @@ mod tests {
                     leaf_count,
                 );
             } else {
-                *leaf_count += 1;
-                *depth_count += current_depth;
+                *leaf_count = 1;
+                *depth_count = max(*depth_count, current_depth);
             }
         }
 
-        // Retuns avg depth of tree (e.g. sum(leaf_depth) / N)
+        // Returns max depth of a tree
         fn get_depth(&self) -> f64 {
             let mut depths_count: usize = 0;
             let mut leafs_count: usize = 0;
@@ -862,19 +982,19 @@ mod tests {
         }
 
         let expected_depths: Vec<f64> = (1..=MAX_DEPTH).map(|x| x as f64).collect();
-        let mean_expected: f64 = expected_depths.iter().sum::<f64>() / expected_depths.len() as f64;
-        let ss_tot: f64 = expected_depths
-            .iter()
-            .map(|&x| (x - mean_expected).powi(2))
-            .sum();
-        let ss_res: f64 = depths
-            .iter()
-            .zip(expected_depths.iter())
-            .map(|(&d, &e)| (d - e).powi(2))
-            .sum();
-        let r2: f64 = 1.0 - (ss_res / ss_tot);
+        
+        let ss_x: f64 = expected_depths.iter().map(|x| x.powi(2)).sum::<f64>() - (expected_depths.iter().sum::<f64>()).powi(2) / expected_depths.len() as f64;
+        let ss_y: f64 = depths.iter().map(|x| x.powi(2)).sum::<f64>() - (depths.iter().sum::<f64>()).powi(2) / expected_depths.len() as f64;
+        let ss_xy: f64 = depths.iter().zip(expected_depths.iter()).map(|(x, y)| x * y).sum::<f64>() - (depths.iter().sum::<f64>() * expected_depths.iter().sum::<f64>()) / expected_depths.len() as f64;
 
-        assert!(r2 > 0.95);
+        let r2 = ss_xy.powi(2) / (ss_x * ss_y);
+
+
+        dbg!(depths);
+        dbg!(expected_depths);
+        dbg!(r2);
+
+        assert!(r2 > 0.99);
     }
 
     #[test]
@@ -887,6 +1007,22 @@ mod tests {
 
         assert!(tree.test_root_black());
         assert!(tree.test_black_nodes_count());
+    }
+
+    #[test]
+    fn test_monadic_properties() {
+        let mut tree_a = Tree::<i32, i32>::default();
+        let mut tree_b = Tree::<i32, i32>::default();
+
+        assert!(tree_a == tree_b);
+
+        for it in 0..128 {
+            tree_a = tree_a.insert(it, it * 3);
+            tree_b = tree_b.insert(it, it * 3);
+        }
+        assert!(tree_a == tree_b);
+        assert!(tree_a + Tree::<i32, i32>::default() == tree_b);
+
     }
 
     #[test]
@@ -927,5 +1063,72 @@ mod tests {
         tree = tree.delete(&0);
 
         assert!(tree.root.is_none());
+    }
+
+    #[test]
+    fn test_merge() {
+        let mut tree_a = Tree::<i32, String>::new();
+        let mut tree_b = Tree::<i32, String>::new();
+
+        tree_a = tree_a.insert(1, "A".to_string());
+        tree_a = tree_a.insert(3, "C".to_string());
+        tree_a = tree_a.insert(5, "E".to_string());
+        tree_a = tree_a.insert(7, "X".to_string());
+
+        tree_b = tree_b.insert(2, "B".to_string());
+        tree_b = tree_b.insert(4, "D".to_string());
+        tree_b = tree_b.insert(6, "F".to_string());
+        tree_b = tree_b.insert(7, "Y".to_string());
+
+        let merged_tree = tree_a.merge(tree_b);
+
+        assert_eq!(merged_tree.get(&1).unwrap(), "A");
+        assert_eq!(merged_tree.get(&2).unwrap(), "B");
+        assert_eq!(merged_tree.get(&3).unwrap(), "C");
+        assert_eq!(merged_tree.get(&4).unwrap(), "D");
+        assert_eq!(merged_tree.get(&5).unwrap(), "E");
+        assert_eq!(merged_tree.get(&6).unwrap(), "F");
+        assert_eq!(merged_tree.get(&7).unwrap(), "Y");
+    }
+
+    #[test]
+    fn test_partial_eq() {
+        let mut tree_a = Tree::<i32, String>::new();
+        let mut tree_b = Tree::<i32, String>::new();
+
+        for i in 0..10 {
+            tree_a = tree_a.insert(i, format!("{i}"));
+            tree_b = tree_b.insert(i, format!("{i}"));
+        }
+
+        assert!(tree_a == tree_b);
+
+        tree_b = tree_b.insert(5, "I'm too lazy to think about a creative name for a sample different variable".to_string());
+
+        assert!(tree_a != tree_b);
+    }
+
+    #[test]
+    fn test_partial_eq_empty_trees() {
+        let tree_a: Tree<i32, i32> = Tree::new();
+        let tree_b: Tree<i32, i32> = Tree::new();
+
+        assert!(tree_a == tree_b);
+    }
+
+    #[test]
+    fn test_partial_eq_different_structures() {
+        let mut tree_a = Tree::<i32, String>::new();
+        let mut tree_b = Tree::<i32, String>::new();
+
+        tree_a = tree_a.insert(2, "B".to_string());
+        tree_a = tree_a.insert(1, "A".to_string());
+        tree_a = tree_a.insert(3, "C".to_string());
+
+        tree_b = tree_b.insert(1, "A".to_string());
+        tree_b = tree_b.insert(2, "B".to_string());
+        tree_b = tree_b.insert(3, "C".to_string());
+
+        assert!(tree_a == tree_b);
     }
 }
