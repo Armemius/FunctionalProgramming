@@ -731,7 +731,6 @@ mod tests {
         }
 
         fn test_black_nodes_helper(
-            &self,
             node: Option<NodeRef<K, usize>>,
             current_count: usize,
             count: &mut Option<usize>,
@@ -742,8 +741,8 @@ mod tests {
                 } else {
                     current_count
                 };
-                self.test_black_nodes_helper(node.borrow().left.clone(), current_count, count)
-                    && self.test_black_nodes_helper(
+                Self::test_black_nodes_helper(node.borrow().left.clone(), current_count, count)
+                    && Self::test_black_nodes_helper(
                         node.borrow().right.clone(),
                         current_count,
                         count,
@@ -757,24 +756,23 @@ mod tests {
         }
 
         fn test_black_nodes_count(&self) -> bool {
-            self.test_black_nodes_helper(self.root.clone(), 0, &mut None)
+            Self::test_black_nodes_helper(self.root.clone(), 0, &mut None)
         }
 
         fn get_depth_helper(
-            &self,
             node: Option<NodeRef<K, usize>>,
             current_depth: usize,
             depth_count: &mut usize,
             leaf_count: &mut usize,
         ) {
             if let Some(node) = node {
-                self.get_depth_helper(
+                Self::get_depth_helper(
                     node.borrow().left.clone(),
                     current_depth + 1,
                     depth_count,
                     leaf_count,
                 );
-                self.get_depth_helper(
+                Self::get_depth_helper(
                     node.borrow().right.clone(),
                     current_depth + 1,
                     depth_count,
@@ -790,7 +788,7 @@ mod tests {
         fn get_depth(&self) -> f64 {
             let mut depths_count: usize = 0;
             let mut leafs_count: usize = 0;
-            self.get_depth_helper(self.root.clone(), 0, &mut depths_count, &mut leafs_count);
+            Self::get_depth_helper(self.root.clone(), 0, &mut depths_count, &mut leafs_count);
             match (depths_count, leafs_count) {
                 (0, _) | (_, 0) => 0.0,
                 (_, _) => depths_count as f64 / leafs_count as f64,
