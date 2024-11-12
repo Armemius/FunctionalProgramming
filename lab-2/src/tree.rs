@@ -1,4 +1,4 @@
-use std::{cell::RefCell, cmp::PartialEq, fmt::Display, rc::Rc};
+use std::{cell::RefCell, cmp::{Ordering, PartialEq}, fmt::Display, rc::Rc};
 
 use super::{
     memory::Memory,
@@ -159,33 +159,37 @@ where
         value: V,
     ) -> Option<NodeRef<K, usize>> {
         let mut current_node = current.borrow_mut();
-        if current_node.key > key {
-            if let Some(left) = current_node.left.clone() {
-                self.insert_helper(left, key, value)
-            } else {
-                let new_node = Rc::new(RefCell::new(Node::new_red(
-                    key,
-                    self.memory.allocate(value),
-                )));
-                current_node.left = Some(new_node.clone());
-                new_node.borrow_mut().parent = Some(Rc::downgrade(&current));
-                Some(new_node)
+        match current_node.key.cmp(&key) {
+            Ordering::Greater => {
+                if let Some(left) = current_node.left.clone() {
+                    self.insert_helper(left, key, value)
+                } else {
+                    let new_node = Rc::new(RefCell::new(Node::new_red(
+                        key,
+                        self.memory.allocate(value),
+                    )));
+                    current_node.left = Some(new_node.clone());
+                    new_node.borrow_mut().parent = Some(Rc::downgrade(&current));
+                    Some(new_node)
+                }  
+            },
+            Ordering::Less => {
+                if let Some(right) = current_node.right.clone() {
+                    self.insert_helper(right, key, value)
+                } else {
+                    let new_node = Rc::new(RefCell::new(Node::new_red(
+                        key,
+                        self.memory.allocate(value),
+                    )));
+                    current_node.right = Some(new_node.clone());
+                    new_node.borrow_mut().parent = Some(Rc::downgrade(&current));
+                    Some(new_node)
+                }
+            },
+            Ordering::Equal => {
+                self.memory.modify(current_node.value, value);
+                None
             }
-        } else if current_node.key < key {
-            if let Some(right) = current_node.right.clone() {
-                self.insert_helper(right, key, value)
-            } else {
-                let new_node = Rc::new(RefCell::new(Node::new_red(
-                    key,
-                    self.memory.allocate(value),
-                )));
-                current_node.right = Some(new_node.clone());
-                new_node.borrow_mut().parent = Some(Rc::downgrade(&current));
-                Some(new_node)
-            }
-        } else {
-            self.memory.modify(current_node.value, value);
-            None
         }
     }
 
@@ -386,7 +390,7 @@ where
     }
 
     pub fn delete(mut self, key: &K) -> Self {
-        let node_to_delete = self.get_node_by_key(key, self.root.clone());
+        let node_to_delete = Self::get_node_by_key(key, self.root.clone());
         if let Some(node) = node_to_delete {
             self.delete_node(node);
         }
@@ -577,16 +581,13 @@ where
     }
 
     fn get_node_by_key(
-        &self,
         key: &K,
         current_node: Option<NodeRef<K, usize>>,
     ) -> Option<NodeRef<K, usize>> {
         if let Some(node) = current_node {
             match node.borrow().key.cmp(key) {
-                std::cmp::Ordering::Less => self.get_node_by_key(key, node.borrow().right.clone()),
-                std::cmp::Ordering::Greater => {
-                    self.get_node_by_key(key, node.borrow().left.clone())
-                }
+                std::cmp::Ordering::Less => Self::get_node_by_key(key, node.borrow().right.clone()),
+                std::cmp::Ordering::Greater => Self::get_node_by_key(key, node.borrow().left.clone()),
                 std::cmp::Ordering::Equal => Some(node.clone()),
             }
         } else {
@@ -595,7 +596,7 @@ where
     }
 
     fn get_value(&self, node_option: Option<NodeRef<K, usize>>) -> Option<&V> {
-        let index = node_option.map(|node| node.borrow().value.clone());
+        let index = node_option.map(|node| node.borrow().value);
         if let Some(index) = index {
             self.memory.access(index)
         } else {
@@ -604,7 +605,7 @@ where
     }
 
     pub fn get(&self, key: &K) -> Option<&V> {
-        self.get_value(self.get_node_by_key(key, self.root.clone()))
+        self.get_value(Self::get_node_by_key(key, self.root.clone()))
     }
 }
 
@@ -643,7 +644,7 @@ where
             children.push((node_ref.right.clone().unwrap(), true));
         }
 
-        for (_, (child, is_right)) in children.into_iter().enumerate() {
+        for (child, is_right) in children.into_iter() {
             let new_prefix = format!("{}{}   ", prefix, if is_tail { "    " } else { "│   " });
             self.print_node(child, &new_prefix, is_right);
         }
@@ -747,13 +748,11 @@ mod tests {
                         current_count,
                         count,
                     )
+            } else if let Some(count) = count {
+                current_count == *count
             } else {
-                if let Some(count) = count {
-                    current_count == *count
-                } else {
-                    *count = Some(current_count);
-                    true
-                }
+                *count = Some(current_count);
+                true
             }
         }
 
