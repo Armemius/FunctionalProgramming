@@ -1,5 +1,3 @@
-use tree::Tree;
-
 mod iterator;
 mod memory;
 mod node;
