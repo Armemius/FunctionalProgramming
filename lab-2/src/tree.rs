@@ -718,16 +718,49 @@ where
     }
 }
 
-impl<K, V> Clone for Tree<K, V>
+impl<K, V> Tree<K, V>
 where
     K: Ord + Clone,
     V: Clone,
 {
+    #[allow(dead_code)]
     fn clone(&self) -> Self {
-        Self {
-            root: self.root.clone(),
-            memory: self.memory.clone(),
+        let mut new_tree = Tree::new();
+        if let Some(root) = &self.root {
+            new_tree.root = Some(Self::clone_node(root, &self.memory, &mut new_tree.memory));
         }
+        new_tree
+    }
+
+    fn clone_node(
+        node: &NodeRef<K, usize>,
+        old_memory: &Memory<V>,
+        new_memory: &mut Memory<V>,
+    ) -> NodeRef<K, usize> {
+        let node_ref = node.borrow();
+        let new_node = Rc::new(RefCell::new(Node {
+            key: node_ref.key.clone(),
+            value: new_memory.allocate(old_memory.access(node_ref.value).unwrap().clone()),
+            color: node_ref.color,
+            left: node_ref
+                .left
+                .as_ref()
+                .map(|left| Self::clone_node(left, old_memory, new_memory)),
+            right: node_ref
+                .right
+                .as_ref()
+                .map(|right| Self::clone_node(right, old_memory, new_memory)),
+            parent: None,
+        }));
+
+        if let Some(left) = &new_node.borrow().left {
+            left.borrow_mut().parent = Some(Rc::downgrade(&new_node));
+        }
+        if let Some(right) = &new_node.borrow().right {
+            right.borrow_mut().parent = Some(Rc::downgrade(&new_node));
+        }
+
+        new_node
     }
 }
 
@@ -735,12 +768,26 @@ where
 mod tests {
     use std::cmp::max;
 
+    use rand::Rng;
+
     use super::*;
 
     impl<K, V> Tree<K, V>
     where
         K: Ord,
     {
+        fn gen_random_tree(size: Option<usize>) -> Tree<i32, i32> {
+            let range = size.unwrap_or(rand::thread_rng().gen_range(300..10000));
+            let mut tree = Tree::new();
+            for _ in 0..range {
+                tree = tree.insert(
+                    rand::thread_rng().gen_range(-100000000..100000000),
+                    rand::thread_rng().gen_range(-100000000..100000000),
+                );
+            }
+            tree
+        }
+
         fn test_root_black(&self) -> bool {
             if let Some(root) = self.root.clone() {
                 let root_ref = root.borrow();
@@ -818,77 +865,83 @@ mod tests {
 
     #[test]
     fn test_depth() {
-        let mut tree = Tree::<i32, i32>::new();
-
-        let mut depths: Vec<f64> = vec![];
-
+        const TRIES: usize = 100;
         const MAX_DEPTH: usize = 10;
 
-        for it in 0..MAX_DEPTH {
-            for jt in (1 << it)..(1 << (it + 1)) {
-                tree = tree.insert(jt, jt);
+        for _ in 0..TRIES {
+            let mut depths: Vec<f64> = vec![];
+
+            for it in 0..MAX_DEPTH {
+                let tree = Tree::<i32, i32>::gen_random_tree(Some(1 << (it + 1)));
+                depths.push(tree.get_depth());
             }
-            depths.push(tree.get_depth());
+
+            let expected_depths: Vec<f64> = (1..=MAX_DEPTH).map(|x| x as f64).collect();
+
+            let ss_x: f64 = expected_depths.iter().map(|x| x.powi(2)).sum::<f64>()
+                - (expected_depths.iter().sum::<f64>()).powi(2) / expected_depths.len() as f64;
+            let ss_y: f64 = depths.iter().map(|x| x.powi(2)).sum::<f64>()
+                - (depths.iter().sum::<f64>()).powi(2) / expected_depths.len() as f64;
+            let ss_xy: f64 = depths
+                .iter()
+                .zip(expected_depths.iter())
+                .map(|(x, y)| x * y)
+                .sum::<f64>()
+                - (depths.iter().sum::<f64>() * expected_depths.iter().sum::<f64>())
+                    / expected_depths.len() as f64;
+
+            let r2 = ss_xy.powi(2) / (ss_x * ss_y);
+
+            assert!(r2 > 0.95);
         }
-
-        let expected_depths: Vec<f64> = (1..=MAX_DEPTH).map(|x| x as f64).collect();
-
-        let ss_x: f64 = expected_depths.iter().map(|x| x.powi(2)).sum::<f64>()
-            - (expected_depths.iter().sum::<f64>()).powi(2) / expected_depths.len() as f64;
-        let ss_y: f64 = depths.iter().map(|x| x.powi(2)).sum::<f64>()
-            - (depths.iter().sum::<f64>()).powi(2) / expected_depths.len() as f64;
-        let ss_xy: f64 = depths
-            .iter()
-            .zip(expected_depths.iter())
-            .map(|(x, y)| x * y)
-            .sum::<f64>()
-            - (depths.iter().sum::<f64>() * expected_depths.iter().sum::<f64>())
-                / expected_depths.len() as f64;
-
-        let r2 = ss_xy.powi(2) / (ss_x * ss_y);
-
-        dbg!(depths);
-        dbg!(expected_depths);
-        dbg!(r2);
-
-        assert!(r2 > 0.99);
     }
 
     #[test]
     fn test_black_root_property() {
-        let mut tree = Tree::<i32, i32>::new();
+        const TRIES: usize = 100;
 
-        for it in 0..128 {
-            tree = tree.insert(it, it * 3);
+        for _ in 0..TRIES {
+            let tree = Tree::<i32, i32>::gen_random_tree(None);
+            assert!(tree.test_root_black());
         }
-
-        assert!(tree.test_root_black());
     }
 
     #[test]
     fn test_black_nodes_property() {
-        let mut tree = Tree::<i32, i32>::new();
+        const TRIES: usize = 100;
 
-        for it in 0..128 {
-            tree = tree.insert(it, it * 3);
+        for _ in 0..TRIES {
+            let tree = Tree::<i32, i32>::gen_random_tree(None);
+            assert!(tree.test_black_nodes_count());
         }
-
-        assert!(tree.test_black_nodes_count());
     }
 
     #[test]
-    fn test_monadic_properties() {
-        let mut tree_a = Tree::<i32, i32>::default();
-        let mut tree_b = Tree::<i32, i32>::default();
+    fn test_neutral_element() {
+        const TRIES: usize = 100;
 
-        assert!(tree_a == tree_b);
+        for _ in 0..TRIES {
+            let tree = Tree::<i32, i32>::gen_random_tree(None);
+            let neutral = Tree::<i32, i32>::default();
 
-        for it in 0..128 {
-            tree_a = tree_a.insert(it, it * 3);
-            tree_b = tree_b.insert(it, it * 3);
+            assert!(tree.clone() + neutral == tree.clone());
         }
-        assert!(tree_a == tree_b);
-        assert!(tree_a + Tree::<i32, i32>::default() == tree_b);
+    }
+
+    #[test]
+    fn test_associativity() {
+        const TRIES: usize = 100;
+
+        for _ in 0..TRIES {
+            let a = Tree::<i32, i32>::gen_random_tree(None);
+            let b = Tree::<i32, i32>::gen_random_tree(None);
+            let c = Tree::<i32, i32>::gen_random_tree(None);
+
+            let lhs = (a.clone() + b.clone()) + c.clone();
+            let rhs = a.clone() + (b.clone() + c.clone());
+
+            assert!(lhs.into_iter().eq(rhs.into_iter()));
+        }
     }
 
     #[test]

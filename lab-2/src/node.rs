@@ -58,37 +58,3 @@ where
         }
     }
 }
-
-impl<K, V> Node<K, V>
-where
-    K: Ord + Clone,
-    V: Clone,
-{
-    #[allow(dead_code)]
-    fn clone(&self) -> NodeRef<K, V> {
-        let new = Self { 
-            key: self.key.clone(), 
-            value: self.value.clone(), 
-            color: self.color, 
-            left: self.left.clone(), 
-            right: self.right.clone(), 
-            parent: None 
-        };
-
-        let current_ref = Rc::new(RefCell::new(new));
-
-        {
-            let left_node = current_ref.clone();
-            let left_parent = &mut left_node.borrow_mut().parent;
-            *left_parent = Some(Rc::downgrade(&current_ref))
-        }
-
-        {
-            let right_node = current_ref.clone();
-            let right_parent = &mut right_node.borrow_mut().parent;
-            *right_parent = Some(Rc::downgrade(&current_ref))
-        }
-
-        current_ref.clone()
-    }
-}
