@@ -1,4 +1,9 @@
-use std::{cell::RefCell, cmp::{Ordering, PartialEq}, fmt::Display, rc::Rc};
+use std::{
+    cell::RefCell,
+    cmp::{Ordering, PartialEq},
+    fmt::Display,
+    rc::Rc,
+};
 
 use super::{
     memory::Memory,
@@ -171,8 +176,8 @@ where
                     current_node.left = Some(new_node.clone());
                     new_node.borrow_mut().parent = Some(Rc::downgrade(&current));
                     Some(new_node)
-                }  
-            },
+                }
+            }
             Ordering::Less => {
                 if let Some(right) = current_node.right.clone() {
                     self.insert_helper(right, key, value)
@@ -185,7 +190,7 @@ where
                     new_node.borrow_mut().parent = Some(Rc::downgrade(&current));
                     Some(new_node)
                 }
-            },
+            }
             Ordering::Equal => {
                 self.memory.modify(current_node.value, value);
                 None
@@ -587,7 +592,9 @@ where
         if let Some(node) = current_node {
             match node.borrow().key.cmp(key) {
                 std::cmp::Ordering::Less => Self::get_node_by_key(key, node.borrow().right.clone()),
-                std::cmp::Ordering::Greater => Self::get_node_by_key(key, node.borrow().left.clone()),
+                std::cmp::Ordering::Greater => {
+                    Self::get_node_by_key(key, node.borrow().left.clone())
+                }
                 std::cmp::Ordering::Equal => Some(node.clone()),
             }
         } else {
@@ -708,6 +715,19 @@ where
 
     fn add(self, other: Self) -> Self {
         self.merge(other)
+    }
+}
+
+impl<K, V> Clone for Tree<K, V>
+where
+    K: Ord + Clone,
+    V: Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            root: self.root.clone(),
+            memory: self.memory.clone(),
+        }
     }
 }
 
@@ -976,5 +996,22 @@ mod tests {
         tree_b = tree_b.insert(3, "C".to_string());
 
         assert!(tree_a == tree_b);
+    }
+
+    #[test]
+    fn test_clone() {
+        let tree: Tree<i32, i32> = Tree::new().insert(1, 1).insert(2, 2).insert(3, 3);
+        let new_tree = tree.clone();
+
+        assert!(tree == new_tree);
+
+        let tree = tree.insert(2, 28);
+
+        assert!(tree != new_tree);
+
+        let tree = tree.delete(&1).delete(&2).delete(&3);
+
+        assert!(tree == Tree::default());
+        assert!(new_tree != Tree::default());
     }
 }
