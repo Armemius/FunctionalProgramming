@@ -660,50 +660,50 @@ where
 
 impl<K, V> PartialEq for Tree<K, V>
 where
-    K: Ord + PartialEq,
-    V: PartialEq,
+    K: Ord + PartialEq + Clone,
+    V: PartialEq + Clone,
 {
     fn eq(&self, other: &Self) -> bool {
-        fn eq_helper<K: Ord + PartialEq, V: PartialEq>(
-            a: Option<NodeRef<K, usize>>,
-            b: Option<NodeRef<K, usize>>,
-            mem_a: &Memory<V>,
-            mem_b: &Memory<V>,
-        ) -> bool {
-            match (a, b) {
-                (Some(left), Some(right)) => {
-                    let left_ref = left.borrow();
-                    let right_ref = right.borrow();
-                    left_ref.key == right_ref.key
-                        && mem_a.access(left_ref.value) == mem_b.access(right_ref.value)
-                        && eq_helper(left_ref.left.clone(), right_ref.left.clone(), mem_a, mem_b)
-                        && eq_helper(
-                            left_ref.right.clone(),
-                            right_ref.right.clone(),
-                            mem_a,
-                            mem_b,
-                        )
-                }
-                (None, None) => true,
-                _ => false,
-            }
+        let mut values_a: Vec<(K, V)> = Vec::new();
+        let mut values_b: Vec<(K, V)> = Vec::new();
+
+        // Traverse self tree and collect key-value pairs
+        if let Some(root_a) = &self.root {
+            Self::eq_helper(root_a, &mut values_a, &self.memory);
         }
 
-        eq_helper(
-            self.root.clone(),
-            other.root.clone(),
-            &self.memory,
-            &other.memory,
-        )
+        // Traverse other tree and collect key-value pairs
+        if let Some(root_b) = &other.root {
+            Self::eq_helper(root_b, &mut values_b, &other.memory);
+        }
+
+        values_a == values_b
     }
 }
 
-impl<K, V> Default for Tree<K, V>
+impl<K, V> Tree<K, V>
 where
-    K: Ord,
+    K: Ord + PartialEq + Clone,
+    V: PartialEq + Clone,
 {
-    fn default() -> Self {
-        Self::new()
+    fn eq_helper(
+        node: &NodeRef<K, usize>,
+        values: &mut Vec<(K, V)>,
+        memory: &Memory<V>,
+    ) {
+        // In-order traversal: Left, Node, Right
+        if let Some(left) = &node.borrow().left {
+            Self::eq_helper(left, values, memory);
+        }
+
+        let node_borrow = node.borrow();
+        let key = node_borrow.key.clone();
+        let value = memory.access(node_borrow.value).unwrap().clone();
+        values.push((key, value));
+
+        if let Some(right) = &node.borrow().right {
+            Self::eq_helper(right, values, memory);
+        }
     }
 }
 
@@ -922,7 +922,7 @@ mod tests {
 
         for _ in 0..TRIES {
             let tree = Tree::<i32, i32>::gen_random_tree(None);
-            let neutral = Tree::<i32, i32>::default();
+            let neutral = Tree::<i32, i32>::new();
 
             assert!(tree.clone() + neutral == tree.clone());
         }
@@ -940,7 +940,7 @@ mod tests {
             let lhs = (a.clone() + b.clone()) + c.clone();
             let rhs = a.clone() + (b.clone() + c.clone());
 
-            assert!(lhs.into_iter().eq(rhs.into_iter()));
+            assert!(lhs == rhs);
         }
     }
 
@@ -1064,7 +1064,7 @@ mod tests {
 
         let tree = tree.delete(&1).delete(&2).delete(&3);
 
-        assert!(tree == Tree::default());
-        assert!(new_tree != Tree::default());
+        assert!(tree == Tree::new());
+        assert!(new_tree != Tree::new());
     }
 }
