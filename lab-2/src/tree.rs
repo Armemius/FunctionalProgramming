@@ -18,6 +18,15 @@ where
     pub(super) memory: Memory<V>,
 }
 
+impl<K, V> Default for Tree<K, V>
+where
+    K: Ord,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<K, V> Tree<K, V>
 where
     K: Ord,
@@ -684,11 +693,7 @@ where
     K: Ord + PartialEq + Clone,
     V: PartialEq + Clone,
 {
-    fn eq_helper(
-        node: &NodeRef<K, usize>,
-        values: &mut Vec<(K, V)>,
-        memory: &Memory<V>,
-    ) {
+    fn eq_helper(node: &NodeRef<K, usize>, values: &mut Vec<(K, V)>, memory: &Memory<V>) {
         if let Some(left) = &node.borrow().left {
             Self::eq_helper(left, values, memory);
         }
