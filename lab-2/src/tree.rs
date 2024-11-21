@@ -667,12 +667,10 @@ where
         let mut values_a: Vec<(K, V)> = Vec::new();
         let mut values_b: Vec<(K, V)> = Vec::new();
 
-        // Traverse self tree and collect key-value pairs
         if let Some(root_a) = &self.root {
             Self::eq_helper(root_a, &mut values_a, &self.memory);
         }
 
-        // Traverse other tree and collect key-value pairs
         if let Some(root_b) = &other.root {
             Self::eq_helper(root_b, &mut values_b, &other.memory);
         }
@@ -691,7 +689,6 @@ where
         values: &mut Vec<(K, V)>,
         memory: &Memory<V>,
     ) {
-        // In-order traversal: Left, Node, Right
         if let Some(left) = &node.borrow().left {
             Self::eq_helper(left, values, memory);
         }
