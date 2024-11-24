@@ -1,0 +1,6 @@
+{
+    "watch": ["wasm/src"],
+    "ext": "rs",
+    "ignore": ["wasm/pkg"],
+    "exec": "wasm-pack build --target web --out-dir ./build ./wasm && npm install ./wasm/build && echo 'Wasm module rebuilt.'"
+  }
