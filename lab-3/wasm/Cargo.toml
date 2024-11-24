@@ -3,12 +3,15 @@ name = "interpolator"
 version = "0.1.0"
 edition = "2021"
 
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
+
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
 wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
-lazy_static = "1.5"
+web-sys = {version = "0.3", features = ["console"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json="1.0"
 serde-json-wasm="1.0.1"

@@ -1,16 +1,15 @@
-mod parser;
+mod interpolator;
 
-use std::any;
-
-use parser::{Point, ToPoint};
+use interpolator::{Point, ToPoint};
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::{from_value, to_value};
 use wasm_bindgen::prelude::*;
 
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = console)]
-    fn log(s: &str);
+fn check_point_order(points: &Vec<Point>) -> bool {
+    points.windows(2).all(|window| match window {
+        [p1, p2] => p1.x < p2.x,
+        _ => true,
+    })
 }
 
 #[wasm_bindgen]
@@ -39,6 +38,15 @@ pub fn parse_points(input: String) -> Result<JsValue, JsError> {
 #[derive(Debug, Serialize, Deserialize)]
 struct Data {
     points: Vec<Point>,
+    methods: Vec<String>,
+    step: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct InterpolationResult {
+    method: String,
+    latex_equation: String,
+    points: Vec<Point>,
 }
 
 #[wasm_bindgen]
@@ -47,6 +55,41 @@ pub fn process(data: &JsValue) -> Result<JsValue, JsError> {
         Ok(data) => data,
         Err(err) => return Err(JsError::new(&format!("{}", err))),
     };
-    log(&format!("{:?}", data));
-    Ok(JsValue::NULL)
+    if data.step <= 0.0 {
+        return Err(JsError::new("Step must be greater than 0.1"));
+    }
+    if data.points.is_empty() {
+        return Err(JsError::new("No points provided"));
+    }
+    if data.methods.is_empty() {
+        return Err(JsError::new("No methods provided"));
+    }
+    if !check_point_order(&data.points) {
+        return Err(JsError::new("Points must be ordered by x increasing"));
+    }
+
+    let res = data
+        .methods
+        .iter()
+        .filter_map(|method| {
+            let interpolator = interpolator::get_interpolator(method).unwrap();
+            if interpolator.points_required().start <= data.points.len() {
+                Some(Ok(InterpolationResult {
+                    method: method.clone(),
+                    latex_equation: interpolator.latex_equation(&data.points),
+                    points: interpolator.interpolate_points(&data.points, data.step),
+                }))
+            } else {
+                None
+            }
+        })
+        .collect::<Result<Vec<InterpolationResult>, JsError>>()
+        .map(|results| {
+            to_value(&results).map_err(|err| JsError::new(&format!("{}", err)))
+        });
+
+    match res {
+        Ok(res) => res,
+        Err(err) => Err(err),
+    }
 }

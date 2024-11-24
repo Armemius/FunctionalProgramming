@@ -5,11 +5,17 @@
   let calculatorContainer: HTMLDivElement | null = null;
   let calculator: any = null;
 
-  let { points } = $props();
+  let { points, graph } = $props();
 
   onMount(() => {
     if (!calculatorContainer) return;
-    calculator = Desmos.GraphingCalculator(calculatorContainer);
+    calculator = Desmos.GraphingCalculator(calculatorContainer, {
+      expressionsCollapsed: true,
+      settingsMenu: false,
+      zoomButtons: true,
+      expressions: false,
+      pointsOfInterest: false
+    });
   });
 
   $effect(() => {
@@ -38,6 +44,13 @@
           pointOpacity: 0.8,
         },
       ],
+    });
+
+    calculator?.setExpression({
+      id: "graph",
+      type: "expression",
+      color: Desmos.Colors.RED,
+      latex: graph,
     });
   });
 </script>

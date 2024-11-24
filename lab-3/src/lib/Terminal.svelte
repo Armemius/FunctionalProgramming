@@ -59,8 +59,17 @@
       }
       term.write("\n\r");
       await readCallback(buffer);
+    } else if (ev.code === "KeyV" && ev.ctrlKey) {
+      let text = await navigator.clipboard.readText();
+      await write(text.replaceAll("\n", "\n\r"));
+      buffer += text;
     } else if (ev.code === "KeyC" && ev.ctrlKey) {
-      await resetCallback();
+      if (term.getSelection()) {
+        await navigator.clipboard.writeText(term.getSelection());
+        term.clearSelection();
+      } else {
+        await resetCallback();
+      }
     } else if (ev.key === "Backspace" && buffer.length > 0) {
       buffer = buffer.slice(0, -1);
       term.write("\b \b");

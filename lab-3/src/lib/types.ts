@@ -4,11 +4,14 @@ export interface Point {
 }
 
 export interface InterpolationResult {
-    points: Point[],
+    method: string,
+    latex_equation: string,
+    points: Point[]
 }
 
 export interface InterpolationType {
     id: string,
     name: string,
+    displayName: string,
     color?: string,
 }

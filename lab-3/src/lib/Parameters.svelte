@@ -5,31 +5,37 @@
     Checkbox,
     Select,
     SelectItem,
+    NumberInput,
   } from "carbon-components-svelte";
   import type { InterpolationType } from "./types";
 
-  const methods: InterpolationType[] = [
-    { id: "linear", name: "Линейная интерполяция" },
+  export const methods: InterpolationType[] = [
+    { id: "linear", name: "Линейная интерполяция", displayName: "Linear" },
     {
       id: "lagrange",
       name: "Интерполяция методом Лагранжа",
+      displayName: "Lagrange method",
     },
     {
       id: "newton",
       name: "Интерполяция методом Ньютона",
+      displayName: "Newton method",
     },
     {
-      id: "spline",
-      name: "Интерполяция сплайнами",
+      id: "rbf",
+      name: "Интерполяция методом RBF",
+      displayName: "Radial basis function method",
     },
   ];
 
   export let locked = false;
   export let selectedMethods: boolean[] = [true];
   export let selectedGraph: string = "default";
+  export let step: number = 1;
 
   export const reset = () => {
-    selectedMethods = [true]
+    step = 1;
+    selectedMethods = [true];
     selectedGraph = "default";
   };
 </script>
@@ -44,20 +50,25 @@
           name="methods"
           labelText={method.name}
           bind:checked={selectedMethods[index]}
-          disabled={(selectedMethods.reduce((acc, val) => acc + val, 0) === 1
-            && selectedMethods[index])
-            || locked}
+          disabled={(selectedMethods.reduce(
+            (acc, val) => acc + (val ? 1 : 0),
+            0
+          ) === 1 &&
+            selectedMethods[index]) ||
+            locked}
         />
       {/each}
-    </FormGroup>
-    <FormGroup>
+      <br />
+      <NumberInput
+        step={0.1}
+        min={0.1}
+        bind:value={step}
+        label="Шаг интерполяции"
+        disabled={locked}
+      />
+      <br />
       <Select labelText="Отображаемый график" bind:selected={selectedGraph}>
-        <SelectItem
-          disabled
-          hidden
-          value="default"
-          text="По умолчанию"
-        />
+        <SelectItem disabled hidden value="default" text="По умолчанию" />
         {#each methods as method, index (method.id)}
           {#if selectedMethods[index]}
             <SelectItem value={method.id} text={method.name} />
