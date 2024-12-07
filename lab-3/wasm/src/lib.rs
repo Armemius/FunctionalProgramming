@@ -93,3 +93,42 @@ pub fn process(data: &JsValue) -> Result<JsValue, JsError> {
         Err(err) => Err(err),
     }
 }
+
+use wasm_bindgen_test::wasm_bindgen_test;
+
+#[cfg(target_arch = "wasm32")]
+extern crate wasm_bindgen_test;
+wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
+
+#[allow(dead_code)]
+#[wasm_bindgen_test]
+fn test_process_with_valid_data() {
+    let data = Data {
+        step: 0.1,
+        points: vec![
+            // Provide valid Point data here
+            Point { x: 0.0, y: 0.0 },
+            Point { x: 1.0, y: 1.0 },
+        ],
+        methods: vec!["linear".to_string()],
+    };
+    let js_value = to_value(&data).unwrap();
+    let result = process(&js_value);
+    assert!(result.is_ok());
+}
+
+#[allow(dead_code)]
+#[wasm_bindgen_test]
+fn test_process_with_invalid_step() {
+    let data = Data {
+        step: 0.0,
+        points: vec![
+            Point { x: 1.0, y: 1.0 },
+            Point { x: 0.0, y: 0.0 },
+        ],
+        methods: vec!["linear".to_string()],
+    };
+    let js_value = to_value(&data).unwrap();
+    let result = process(&js_value);
+    assert!(result.is_err());
+}
