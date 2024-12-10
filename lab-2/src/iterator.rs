@@ -26,7 +26,7 @@ where
     }
 }
 
-impl<'a, K, V> Iterator for TreeIterator<'a, K, V>
+impl<K, V> Iterator for TreeIterator<'_, K, V>
 where
     K: Ord + Clone,
     V: Clone,
