@@ -23,3 +23,39 @@ jobs:
 
       - name: 🔍 Lint Markdown files
         run: markdownlint '**/*.md'
+
+  lint-haskell:
+    name: 🔢 Lint Haskell Projects
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project:
+          - lab-1/haskell
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y hlint
+      - run: hlint --no-summary ${{ matrix.project }}
+
+  test-haskell:
+    name: 🧪 Test Haskell Projects
+    runs-on: ubuntu-latest
+    needs: lint-haskell
+    if: ${{ needs.lint-haskell.result == 'success' }}
+    strategy:
+      matrix:
+        project:
+          - lab-1/haskell
+    steps:
+      - uses: actions/checkout@v4
+      - uses: haskell-actions/setup@v2
+        with:
+          ghc-version: "9.6.5"
+          enable-stack: true
+      - name: 🔧 Build project
+        working-directory: ${{ matrix.project }}
+        run: stack build
+      - name: 🧪 Run tests
+        working-directory: ${{ matrix.project }}
+        run: stack test
