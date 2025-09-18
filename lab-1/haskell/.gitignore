@@ -7,6 +7,7 @@ dist-newstyle/
 
 # GHC environment files
 .ghc.environment.*
+*.cabal
 
 # Haskell profiling/event logs
 *.aux
