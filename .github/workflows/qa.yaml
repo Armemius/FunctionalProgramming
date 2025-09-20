@@ -8,19 +8,15 @@ jobs:
   lint-markdown:
     name: 📝 Lint Markdown Files
     runs-on: ubuntu-latest
-
     steps:
       - name: 🛎️ Checkout code
         uses: actions/checkout@v4
-
       - name: 🟢 Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '16'
-
       - name: 📦 Install markdownlint-cli
         run: npm install -g markdownlint-cli
-
       - name: 🔍 Lint Markdown files
         run: markdownlint '**/*.md'
 
@@ -59,3 +55,39 @@ jobs:
       - name: 🧪 Run tests
         working-directory: ${{ matrix.project }}
         run: stack test
+
+  lint-julia:
+    name: 🔢 Lint Julia Projects
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 🟢 Set up Julia
+        uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.9'
+      - name: 📦 Install JuliaFormatter
+        run: |
+          julia -e 'using Pkg; Pkg.add("JuliaFormatter")'
+      - name: 🔍 Format and lint Julia files
+        working-directory: lab-1/julia
+        run: |
+          julia -e 'using JuliaFormatter; format(".")'
+
+  test-julia:
+    name: 🧪 Test Julia Projects
+    runs-on: ubuntu-latest
+    needs: lint-julia
+    steps:
+      - uses: actions/checkout@v4
+      - name: 🟢 Set up Julia
+        uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.11'
+      - name: 🔧 Activate project
+        working-directory: lab-1/julia
+        run: |
+          julia --project=. -e 'using Pkg; Pkg.instantiate()'
+      - name: 🧪 Run tests
+        working-directory: lab-1/julia
+        run: |
+          julia --project=. -e 'using Pkg; Pkg.test()'
