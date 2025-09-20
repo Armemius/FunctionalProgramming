@@ -15,10 +15,8 @@ ghc-options:
 dependencies:
   - base >= 4.7 && < 5
 
-executables:
-  labwork:
-    main: Main.hs
-    source-dirs: src
+library:
+  source-dirs: src
 
 tests:
   labwork-test:
@@ -38,3 +36,4 @@ tests:
       - tasty
       - tasty-hunit
       - tasty-quickcheck
+      - labwork
