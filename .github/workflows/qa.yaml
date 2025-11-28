@@ -27,6 +27,7 @@ jobs:
       matrix:
         project:
           - lab-1/haskell
+          - lab-2
     steps:
       - uses: actions/checkout@v4
       - run: |
