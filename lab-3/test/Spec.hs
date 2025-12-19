@@ -33,6 +33,13 @@ main = hspec $ do
           values = map outPoint (collectOutputs cfg pts)
       values `shouldBe` [Point 0 0, Point 1 1, Point 2 4, Point 3 9]
 
+  describe "Lagrange interpolation" $ do
+    it "matches x^2 on four points with window 3" $ do
+      let cfg = Config {cfgStep = 1, cfgAlgorithms = [Lagrange 3]}
+          pts = [Point 0 0, Point 1 1, Point 2 4, Point 3 9]
+          values = map outPoint (collectOutputs cfg pts)
+      values `shouldBe` [Point 0 0, Point 1 1, Point 2 4, Point 3 9]
+
   describe "streaming behaviour" $ do
     it "delays output until enough points arrive" $ do
       let cfg = Config {cfgStep = 1, cfgAlgorithms = [Linear]}

@@ -11,15 +11,17 @@ data Options = Options
   { optStep :: Double
   , optLinear :: Bool
   , optNewton :: Bool
+  , optLagrange :: Bool
   , optWindow :: Int
   }
 
 main :: IO ()
 main = do
-  Options {optStep, optLinear, optNewton, optWindow} <- execParser opts
+  Options {optStep, optLinear, optNewton, optLagrange, optWindow} <- execParser opts
   let requestedAlgs =
         (if optLinear then [Linear] else [])
           ++ (if optNewton then [Newton optWindow] else [])
+          ++ (if optLagrange then [Lagrange optWindow] else [])
       algorithms =
         if null requestedAlgs
           then [Linear]
@@ -71,6 +73,10 @@ optionsParser =
     <*> switch
       ( long "newton"
           <> help "Enable Newton interpolation"
+      )
+    <*> switch
+      ( long "lagrange"
+          <> help "Enable Lagrange interpolation"
       )
     <*> option
       (eitherReader positiveWindow)

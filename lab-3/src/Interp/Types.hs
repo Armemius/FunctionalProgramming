@@ -18,6 +18,7 @@ data Point = Point
 data Algorithm
   = Linear
   | Newton Int
+  | Lagrange Int
   deriving (Show, Eq)
 
 data Config = Config
@@ -48,6 +49,7 @@ data State = State
 windowSize :: Algorithm -> Int
 windowSize Linear = 2
 windowSize (Newton n) = max 2 n
+windowSize (Lagrange n) = max 2 n
 
 epsilon :: Double
 epsilon = 1e-9

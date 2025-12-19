@@ -25,6 +25,7 @@ renderOutput (Output alg Point {px = x, py = y}) =
     fmt v = removeTrailingZeroes $ showFFloat (Just 6) v ""
     algorithmName Linear = "linear"
     algorithmName (Newton _) = "newton"
+    algorithmName (Lagrange _) = "lagrange"
     removeTrailingZeroes s =
       let trimmed = reverse (dropWhile (== '0') (reverse s))
        in if not (null trimmed) && last trimmed == '.'

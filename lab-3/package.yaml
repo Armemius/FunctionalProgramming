@@ -18,6 +18,16 @@ dependencies:
 
 library:
   source-dirs: src
+  exposed-modules:
+    - Lib
+  other-modules:
+    - Interp.Types
+    - Interp.Algorithms
+    - Interp.Algorithms.Linear
+    - Interp.Algorithms.Newton
+    - Interp.Algorithms.Lagrange
+    - Interp.Stream
+    - Interp.Format
 
 executables:
   demo:

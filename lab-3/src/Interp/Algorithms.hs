@@ -2,6 +2,7 @@ module Interp.Algorithms
   ( interpolate
   , linearValue
   , newtonValue
+  , lagrangeValue
   , windowFor
   , lastPoint
   , bounds
@@ -12,6 +13,7 @@ import qualified Data.List as List
 import Data.Maybe (listToMaybe)
 import Data.Ord (comparing)
 import Interp.Algorithms.Linear (linearValue)
+import Interp.Algorithms.Lagrange (lagrangeValue)
 import Interp.Algorithms.Newton (newtonValue)
 import Interp.Types
 
@@ -24,6 +26,9 @@ interpolate Linear pts x = do
 interpolate (Newton n) pts x = do
   window <- windowFor n pts x
   pure (newtonValue window x)
+interpolate (Lagrange n) pts x = do
+  window <- windowFor n pts x
+  pure (lagrangeValue window x)
 
 windowFor :: Int -> [Point] -> Double -> Maybe [Point]
 windowFor k pts x

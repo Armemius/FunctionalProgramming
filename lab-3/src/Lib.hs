@@ -11,9 +11,10 @@ module Lib
   , renderOutput
   , collectOutputs
   , linearValue
+  , lagrangeValue
   ) where
 
-import Interp.Algorithms (linearValue)
+import Interp.Algorithms (lagrangeValue, linearValue)
 import Interp.Format (parsePoint, renderOutput)
 import Interp.Stream (acceptPoint, collectOutputs, finalizeOutputs, initialState)
 import Interp.Types
