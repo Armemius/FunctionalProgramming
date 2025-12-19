@@ -51,6 +51,12 @@ main = hspec $ do
       let finalOutputs = finalizeOutputs cfg st2
       map outPoint finalOutputs `shouldBe` []
 
+    it "rejects decreasing x" $ do
+      let cfg = Config {cfgStep = 1, cfgAlgorithms = [Linear]}
+          st0 = initialState cfg
+          Right (st1, _) = pushPoint cfg st0 (Point 1 1)
+      pushPoint cfg st1 (Point 0 0) `shouldSatisfy` isLeft
+
   describe "properties" $ do
     it "preserves endpoints for linear interpolation" $
       property $ do
@@ -80,3 +86,7 @@ finiteDouble = choose (-1000, 1000)
 
 approx :: Double -> Double -> Property
 approx a b = counterexample ("expected " <> show a <> ", got " <> show b) (abs (a - b) < 1e-6)
+
+isLeft :: Either a b -> Bool
+isLeft (Left _) = True
+isLeft _ = False

@@ -6,6 +6,7 @@ import Lib
 import Options.Applicative
 import System.IO (BufferMode (..), hGetLine, hIsEOF, hPutStrLn, hSetBuffering, stderr, stdin, stdout)
 import Text.Read (readMaybe)
+import System.Exit (exitFailure)
 
 data Options = Options
   { optStep :: Double
@@ -51,9 +52,11 @@ loop cfg state = do
           hPutStrLn stderr ("Skipping malformed line: " <> line)
           loop cfg state
         Just pt -> do
-          let (state', outputs) = acceptPoint cfg state pt
-          mapM_ (putStrLn . renderOutput) outputs
-          loop cfg state'
+          case pushPoint cfg state pt of
+            Left err -> hPutStrLn stderr err >> exitFailure
+            Right (state', outputs) -> do
+              mapM_ (putStrLn . renderOutput) outputs
+              loop cfg state'
 
 optionsParser :: Parser Options
 optionsParser =

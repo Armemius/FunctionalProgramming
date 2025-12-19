@@ -1,6 +1,7 @@
 module Interp.Stream
   ( initialState
   , acceptPoint
+  , pushPoint
   , finalizeOutputs
   , collectOutputs
   ) where
@@ -21,6 +22,13 @@ initialState cfg =
 acceptPoint :: Config -> State -> Point -> (State, [Output])
 acceptPoint cfg state newPoint =
   produce cfg False state {knownPoints = knownPoints state ++ [newPoint]}
+
+pushPoint :: Config -> State -> Point -> Either String (State, [Output])
+pushPoint cfg state newPoint =
+  case lastPoint (knownPoints state) of
+    Just lastP | px newPoint < px lastP ->
+      Left ("Input points must be non-decreasing by x; got " <> show (px newPoint) <> " after " <> show (px lastP))
+    _ -> Right (acceptPoint cfg state newPoint)
 
 finalizeOutputs :: Config -> State -> [Output]
 finalizeOutputs cfg state = snd (produce cfg True state)

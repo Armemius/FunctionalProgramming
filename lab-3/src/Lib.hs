@@ -6,6 +6,7 @@ module Lib
   , State
   , initialState
   , acceptPoint
+  , pushPoint
   , finalizeOutputs
   , parsePoint
   , renderOutput
@@ -16,5 +17,5 @@ module Lib
 
 import Interp.Algorithms (lagrangeValue, linearValue)
 import Interp.Format (parsePoint, renderOutput)
-import Interp.Stream (acceptPoint, collectOutputs, finalizeOutputs, initialState)
+import Interp.Stream (acceptPoint, collectOutputs, finalizeOutputs, initialState, pushPoint)
 import Interp.Types
