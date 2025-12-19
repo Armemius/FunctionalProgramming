@@ -1,0 +1,39 @@
+# Stack build directories
+.stack-work/
+
+# Cabal build artifacts (in case cabal is also used)
+dist/
+dist-newstyle/
+
+# GHC environment files
+.ghc.environment.*
+*.cabal
+
+# Haskell profiling/event logs
+*.aux
+*.hp
+*.prof
+*.ps
+*.eventlog
+*.json
+
+# Hoogle database
+.hoogle/
+
+# Stack local config
+stack.yaml.lock
+
+# OS / editor junk
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# VSCode / JetBrains
+.vscode/
+.idea/
+
+# Other
+*.hi
+*.o

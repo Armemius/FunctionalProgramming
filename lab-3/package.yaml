@@ -1,0 +1,60 @@
+name: labwork
+version: 1.0.0
+
+ghc-options:
+  - -Wall
+  - -Wcompat
+  - -Widentities
+  - -Wincomplete-record-updates
+  - -Wincomplete-uni-patterns
+  - -Wmissing-export-lists
+  - -Wmissing-home-modules
+  - -Wpartial-fields
+  - -Wredundant-constraints
+
+dependencies:
+  - base >= 4.7 && < 5
+  - optparse-applicative >= 0.17
+
+library:
+  source-dirs: src
+  exposed-modules:
+    - Lib
+  other-modules:
+    - Interp.Types
+    - Interp.Algorithms
+    - Interp.Algorithms.Linear
+    - Interp.Algorithms.Newton
+    - Interp.Algorithms.Lagrange
+    - Interp.Stream
+    - Interp.Format
+
+executables:
+  demo:
+    main: Main.hs
+    source-dirs: app
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
+    dependencies:
+      - labwork
+
+tests:
+  labwork-test:
+    main: Spec.hs
+    source-dirs: test
+    ghc-options:
+      - -Wall
+      - -Wcompat
+      - -Widentities
+      - -Wincomplete-record-updates
+      - -Wincomplete-uni-patterns
+      - -Wmissing-export-lists
+      - -Wmissing-home-modules
+      - -Wpartial-fields
+      - -Wredundant-constraints
+    dependencies:
+      - hspec
+      - QuickCheck
+      - labwork

@@ -12,9 +12,9 @@ jobs:
       - name: 🛎️ Checkout code
         uses: actions/checkout@v4
       - name: 🟢 Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: '16'
+          node-version: '18'
       - name: 📦 Install markdownlint-cli
         run: npm install -g markdownlint-cli
       - name: 🔍 Lint Markdown files
@@ -28,6 +28,7 @@ jobs:
         project:
           - lab-1/haskell
           - lab-2
+          - lab-3
     steps:
       - uses: actions/checkout@v4
       - run: |
@@ -45,6 +46,7 @@ jobs:
         project:
           - lab-1/haskell
           - lab-2
+          - lab-3
     steps:
       - uses: actions/checkout@v4
       - uses: haskell-actions/setup@v2
