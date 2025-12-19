@@ -37,7 +37,7 @@ main = do
       info
         (optionsParser <**> helper)
         ( fullDesc
-            <> progDesc "Stream interpolation (linear and Newton) driven by stdin"
+            <> progDesc "Stream interpolation driven by stdin"
         )
 
 loop :: Config -> State -> IO State
