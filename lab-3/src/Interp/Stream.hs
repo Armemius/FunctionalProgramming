@@ -89,7 +89,7 @@ emit cfg spec pts startTarget initialLast =
 finalizeTail :: Config -> Algorithm -> [Point] -> Bool -> Maybe Double -> [Output] -> Maybe Output
 finalizeTail _ _ _ False _ _ = Nothing
 finalizeTail _ spec pts True lastProduced _ =
-  if not (length pts >= windowSize spec)
+  if length pts < windowSize spec
     then Nothing
     else
       let lastX = maybe 0 snd (bounds pts)

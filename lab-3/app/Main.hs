@@ -4,7 +4,7 @@ module Main (main) where
 
 import Lib
 import Options.Applicative
-import System.IO (BufferMode (..), hGetLine, hIsEOF, hPutStrLn, hSetBuffering, stderr, stdin, stdout)
+import System.IO (BufferMode (..), hPutStrLn, hSetBuffering, isEOF, stderr, stdout)
 import Text.Read (readMaybe)
 import System.Exit (exitFailure)
 
@@ -20,9 +20,9 @@ main :: IO ()
 main = do
   Options {optStep, optLinear, optNewton, optLagrange, optWindow} <- execParser opts
   let requestedAlgs =
-        (if optLinear then [Linear] else [])
-          ++ (if optNewton then [Newton optWindow] else [])
-          ++ (if optLagrange then [Lagrange optWindow] else [])
+        [Linear | optLinear]
+          ++ [Newton optWindow | optNewton]
+          ++ [Lagrange optWindow | optLagrange]
       algorithms =
         if null requestedAlgs
           then [Linear]
@@ -42,11 +42,11 @@ main = do
 
 loop :: Config -> State -> IO State
 loop cfg state = do
-  done <- hIsEOF stdin
+  done <- isEOF
   if done
     then pure state
     else do
-      line <- hGetLine stdin
+      line <- getLine
       case parsePoint line of
         Nothing -> do
           hPutStrLn stderr ("Skipping malformed line: " <> line)

@@ -26,7 +26,7 @@ dividedDifferences pts = mapMaybe listToMaybe (build (map py pts) 0)
           _ : _ -> build (step row offset) (offset + 1)
           _ -> []
     step (y0 : y1 : ys) offset =
-      let denominators = zipWith (\x0 xk -> xk - x0) xs (drop (offset + 1) xs)
+      let denominators = zipWith (flip (-)) xs (drop (offset + 1) xs)
           go (a : b : restVals) (d : ds) = ((b - a) / d) : go (b : restVals) ds
           go _ _ = []
        in go (y0 : y1 : ys) denominators
