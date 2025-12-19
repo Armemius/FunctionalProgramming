@@ -28,6 +28,7 @@ jobs:
         project:
           - lab-1/haskell
           - lab-2
+          - lab-3
     steps:
       - uses: actions/checkout@v4
       - run: |
@@ -45,6 +46,7 @@ jobs:
         project:
           - lab-1/haskell
           - lab-2
+          - lab-3
     steps:
       - uses: actions/checkout@v4
       - uses: haskell-actions/setup@v2
